@@ -8,8 +8,14 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.chains import RetrievalQA
 import json
 import os
+import os
+from dotenv import load_dotenv
 
-os.environ["OPENAI_API_KEY"] = "sk-proj-h4Y5gSEMdnYUlhgEh8dQT3BlbkFJLt3DON9HWoh3gAKmRWvr"
+load_dotenv()
+
+api_key = os.getenv("OPENAI_API_KEY")
+
+os.environ["OPENAI_API_KEY"] = api_key
 debug = False
 
 
