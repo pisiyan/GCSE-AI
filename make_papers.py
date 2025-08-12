@@ -280,7 +280,7 @@ class GcseAssistantMakeExams:
 
 rs_aqa_assistant = GcseAssistantMakeExams("ReligiousStudies", "AQA")
 
-marks = 24
+marks = 48
 exam_topic = "Islam"
 topics = ["Islam beliefs and teachings", "Islam practises"]
 
