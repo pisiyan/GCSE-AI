@@ -280,6 +280,10 @@ class GcseAssistantMakeExams:
 
 rs_aqa_assistant = GcseAssistantMakeExams("ReligiousStudies", "AQA")
 
-user_input = "make a 24 mark RS AQA GCSE Themes paper which has 1 topic: (The existence of God and revelation)"
+marks = 24
+exam_topic = "Islam"
+topics = ["Islam beliefs and teachings", "Islam practises"]
 
-rs_aqa_assistant.make_exam("Themes", user_input)
+user_input = f"make a {marks} mark paper which has {len(topics)} topics: {topics}"
+
+rs_aqa_assistant.make_exam(exam_topic, user_input)
