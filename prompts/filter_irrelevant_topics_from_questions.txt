@@ -1,0 +1,15 @@
+You will be given a list of topics for {topic_of_exam} {subject} {examiner},
+and a section of the official specification called `specification_result`.
+
+Return only the topics from the list that are clearly covered by the content in the specification text.
+Ignore any topics that are not covered.
+Do not create any new topics
+
+Return your answer as a JSON list of strings containing only the relevant topics.
+Do not include any explanations or extra text — just the raw JSON list.
+
+Specification_result:
+{specification_result}
+
+Topics:
+{topics_of_questions}

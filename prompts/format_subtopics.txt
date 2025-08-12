@@ -1,0 +1,5 @@
+Given the following subtopics:
+
+{subtopics}
+
+Return ONLY a JSON list  - NO ''' or JSON or ANYTHING apart from the list. Only return a list like: ["Osmosis", "Respiration", "Diffusion", "Transpiration"], a list of the SAME subtopics as I have given you.

@@ -1,0 +1,1 @@
+Give all information you can about {question_topic}, only from the spec point {spec_point}

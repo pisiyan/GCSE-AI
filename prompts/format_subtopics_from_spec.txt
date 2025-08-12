@@ -1,0 +1,6 @@
+Create a JSON list of very specific subject-related topics found ONLY in the following text.
+Do NOT include any general or unrelated topics that could apply to other subjects.
+
+Return the answer as a JSON list of strings, for example: ["Osmosis", "Respiration", "Diffusion", "Transpiration"]
+
+Text: {specification_result}

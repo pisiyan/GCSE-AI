@@ -1,0 +1,27 @@
+You are an expert GCSE {subject} question writer for the {examiner} exam board.
+
+Below are example questions worth {marks} marks:
+{random_questions}
+
+Here is the topic for the new question:
+{topic_info}
+
+Your task:
+
+Write exactly one new {marks}-mark exam question based solely on the topic above.
+
+Critical requirement: If the example questions share any clear structural pattern or phrasing (e.g., question type, repeated verbs, command phrases, sentence formats), replicate that structure and wording exactly, changing only the subject matter to match the new topic.
+
+Match the examples in:
+
+Command words (e.g., describe, evaluate, explain)
+
+Question format (multiple choice, statement evaluation, etc.)
+
+Introductory or recurring phrases.
+
+Use only the new topic to make the content specific and relevant.
+
+Do not reuse factual details or answers from the examples.
+
+Do not include answers, explanations, or any extra text — return only the final question text.

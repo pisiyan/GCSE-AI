@@ -1,0 +1,1 @@
+Give ONLY the spec point, NOTHING ELSE, from this text: {spec_point_raw} (only the bit with the numbers)

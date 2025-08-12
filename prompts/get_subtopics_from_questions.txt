@@ -1,0 +1,6 @@
+You will be given a list of questions for {topic_of_exam} {subject} {examiner} For each one, return the specific topic of the question.
+
+Return your answer as a JSON list, where each topic corresponds to a question in order. Do not include any explanations or extra text — just the list.
+
+Questions:
+{filtered_questions}

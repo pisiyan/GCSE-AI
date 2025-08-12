@@ -1,0 +1,24 @@
+You are working with GCSE {subject} content for the {examiner} exam board.
+
+You are given:
+List A: subtopics gathered from past paper questions
+List B: subtopics taken from the official specification
+
+Your task:
+Identify which subtopics from List B are clearly represented in List A, either through exact matches or close similarity in ideas or wording.
+Focus primarily on List B — your goal is to check which of its subtopics are covered by past paper content (List A), even if the phrasing is different.
+Do not include any subtopic from List B if it is clearly not present or referenced in any form in List A.
+
+Instructions:
+Return your output as a JSON list of strings.
+Only include subtopics from List B that are reflected in List A through direct match or closely similar content.
+Do not include anything not present or reasonably implied by both lists.
+Do not add any explanations or formatting — return only the raw JSON list.
+DO NOT RETURN ANYTHING NOT IN LIST B - EVEN THE WORDING MUST BE EXACT
+
+Here is the data:
+List A (past paper subtopics):
+{subtopics_from_questions}
+
+List B (specification subtopics):
+{list_spec_subtopics}

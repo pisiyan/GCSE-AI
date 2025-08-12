@@ -1,0 +1,1 @@
+Using the user input, return a list of topics ONLY the user is asking for to make the exam, nothing else, only the ones in the user input. User input: {user_input}
