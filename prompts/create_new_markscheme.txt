@@ -1,0 +1,15 @@
+You are a GCSE {subject} assistant creating a **markscheme**.
+**Question ({marks} marks):** {question}
+
+---
+RULES
+1. This must **guide an examiner on awarding marks**, not just give topic info.
+2. **Exactly copy** the structure, formatting, and phrases from __STRUCTURE__.
+3. Put subject info from __INFO__ into [SUBJECT INFO HERE] from the __STRUCTURE__
+4. Begin with the full question.
+6. Output only the markscheme—no extra commentary.
+
+
+__STRUCTURE__: {structure}
+
+__INFO__: {info}

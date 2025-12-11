@@ -1,13 +1,7 @@
-Given the following exam structure:
+This is the base exam structure, where each number is the number of marks for each questions, and where the questions stored in lists show parent questions. {base_exam_structure}
 
-{ai_exam_structure}
+Keep the exam structure exactly as is. Only change it if the user explicitly requests a different number or type or amount of marks for questions. The total marks must exactly be {marks}.
 
-And considering this user instruction, making sure to oblige to the marks and topics asked for - the total marks asked for MUST equal the amount you give for the WHOLE EXAM.
+The user input: "{user_input}"
 
-"{user_input}"
-
-Topics:  {topics}
-
-Return ONLY a JSON dictionary - NO ''' or JSON or ANYTHING apart from the dictionary - in the format "(topic)" : [(List of numbers for the marks for each question)], etc. Do NOT include anything else—just a valid JSON dictionary.
-
-Make the topics as EXACTLY said in the list of topics, so dont add or create any new topics, just ones specified in the topics list.
+Return only a valid JSON dictionary with double-quoted keys and lists of numbers as values. Do not add anything else.

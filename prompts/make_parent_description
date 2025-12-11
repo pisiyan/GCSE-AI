@@ -1,0 +1,17 @@
+You are given [examples], which are ONLY the short introductory descriptions before numbered exam questions.
+Your task: Write ONE new description in the same style, using ONLY content from [subtopic_info]. It must create a scenario where subject-related questions could be based, but not involve students learning in a classroom.
+
+Important:
+ONLY setup/context text, not a question.
+No question words.
+No mention of topics, specifications, or exam structure.
+No figures, diagrams, or instructions.
+Length: 1–3 lines, like [examples].
+Output ONLY the description text.
+No question numbers or lettering.
+Copy the style, NOT the content, of [examples].
+MUST stay fully relevant to [subtopic] and [subtopic_info].
+
+[subtopic]: {subtopic}
+[subtopic_info]: {subtopic_info}
+[examples]: {random_questions}

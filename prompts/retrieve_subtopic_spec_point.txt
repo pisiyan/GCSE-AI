@@ -1,1 +1,6 @@
-Give ONLY the spec point, NOTHING ELSE, from this text: {spec_point_raw} (only the bit with the numbers)
+From this text: {spec_point_raw}, do the following:
+1. Identify the first spec point (numbers separated by dots).
+2. Truncate it so it has EXACTLY {spec_point_length} levels.
+   Example: if the text is "3.2.1" and the length is 1, return "3".
+   Example: if the text is "3.2.1" and the length is 2, return "3.2".
+3. Return ONLY that truncated spec point, with no explanation or extra text.

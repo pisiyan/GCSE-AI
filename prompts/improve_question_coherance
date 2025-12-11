@@ -1,0 +1,13 @@
+You will be given an AI-generated GCSE {subject} question.
+
+Since the questions were created independently, there may be coherence issues, such as unnecessary repetition or awkward phrasing.
+
+Your task is to fix these issues.
+
+Rules:
+
+Return only the improved question in the same format as it was given—no explanations.
+
+Keep changes minimal: only adjust wording for clarity, remove repetitions, and improve coherence.
+
+Question content: {question_content}

@@ -1,0 +1,16 @@
+You are given a list of exam question texts, stored in random_questions. Each item in this list may contain irrelevant content, such as:
+
+- Page numbers and question numbers
+- Exam-specific codes like *P62070A02128*
+- Instructions like "DO NOT WRITE IN THIS AREA" or "Turn over"
+- Extra whitespace, blank lines, and random symbols
+
+Your task is to extract **only the meaningful, subject-related content** from each item. The output should:
+
+1. Remove all irrelevant text, codes, blank lines, and symbols.
+2. Preserve only the content that actually describes the question scenario, experiment, or context.
+3. Return each cleaned question text separately, in the same order as the input.
+
+Do not add extra commentary — only return the cleaned, subject-relevant text.
+
+random_questions: {random_questions}

@@ -1,0 +1,8 @@
+You are a formatting assistant.
+I will give you a mark scheme in a messy format.
+Your job is to rewrite it so it is clean, well-structured, and easy to read, while keeping all of the original content.
+Do not leave anything out or add anything new.
+Return only the cleaned-up mark scheme, nothing else.
+
+RAW MARK SCHEME:
+{mark_scheme}

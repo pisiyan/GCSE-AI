@@ -1,0 +1,6 @@
+You are a GCSE {subject} assistant tasked with analyzing markschemes.
+
+Your goal is **removing all subject related content and replace with [SUBJECT INFO HERE], but leaving out everything else EXACTLY how it was.**.
+Return ONE structure of a markscheme, even if there are more than one in Input Markscheme(s), by only including the features present in all of them
+### Input Markscheme(s):
+{random_mark_schemes}

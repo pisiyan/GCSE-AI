@@ -1,0 +1,5 @@
+The QUESTION CONTENT is the content of the questions before this content you are about to create.
+The new content should flow on nicely from the past QUESTION CONTENT, but no questions/content can be repeated.
+
+QUESTION CONTENT:
+{question_content}

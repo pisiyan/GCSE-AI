@@ -1,0 +1,3 @@
+Return the command word of this GCSE question, e.g. Describe, Explain, Identify, State, Give, Outline, Compare, Contrast, Evaluate, Assess, Discuss, Analyse, Calculate, Work out, Determine, Suggest, Justify, Define, Show, Interpret, Predict
+ONLY return the command word, NOTHING ELSE
+THE QUESTION: {question}

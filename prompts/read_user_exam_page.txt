@@ -1,0 +1,8 @@
+**Read the image.
+
+Extract all text exactly as written.
+
+For every diagram, picture, graph, table, or any other visual element, output a VERY detailed description using the format:
+[ … ]
+
+Output only the extracted text + the visual descriptions. No commentary, no summaries, no extra wording.**
