@@ -1,692 +1,508 @@
-import pickle
-from langchain.schema import HumanMessage
-from load_and_store import DatabaseManager
-from openai import OpenAI
-import numpy as np
-import random
-from langchain_community.vectorstores import FAISS
-from langchain_openai import ChatOpenAI
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.chains import RetrievalQA
-import json
+"""GCSE AI — Main application entry point.
+
+Orchestrates exam generation, marking, and revision material creation
+by wiring together the config, LLM, similarity, generator, and marker modules.
+"""
+
+import logging
 import os
+import json
+from typing import Any
+
 from dotenv import load_dotenv
-load_dotenv()
+from langchain.chains import RetrievalQA
+from langchain_community.vectorstores import FAISS
+from langchain_huggingface import HuggingFaceEmbeddings
+
+from config import load_subject_config, SubjectConfig
+from llm_client import LLMClient
+from similarity import SimilarityEngine
+from exam_generator import ExamStructureBuilder, QuestionGenerator
+from exam_marker import ExamMarker
+from exam_quality_analyzer import ExamQualityAnalyzer
+from feedback_quality_analyzer import FeedbackQualityAnalyzer
+
+
+# Load environment variables relative to the script directory
+script_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(dotenv_path=os.path.join(script_dir, ".env"), override=True)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 api_key = os.getenv("OPENAI_API_KEY")
+if api_key:
+    os.environ["OPENAI_API_KEY"] = api_key.strip()
 
-os.environ["OPENAI_API_KEY"] = api_key
-debug = False
 
+class GcseAssistant:
+    """Main GCSE AI assistant that orchestrates all functionality.
 
-class GcseAssistantMakeExams:
+    Wires together configuration, LLM client, similarity engine,
+    exam generation, and exam marking modules.
+    """
 
-    def __init__(self, subject, examiner):
-        print("Initializing...")
+    def __init__(self, subject: str, examiner: str) -> None:
+        """Initialize the GCSE Assistant.
+
+        Args:
+            subject: Subject name (e.g., "Biology").
+            examiner: Exam board name (e.g., "Edexcel").
+        """
+        logger.info("Initializing GCSE Assistant for %s (%s)...", subject, examiner)
+
         self.subject = subject
         self.examiner = examiner
-        self.subject_info = self.get_subject_info()
-        self.EXAMPLE_QUESTIONS = int(self.subject_info["example_questions"])
-        self.vectorDatabase = self.subject + "-" + self.examiner + "-vectorDatabase"
-        self.embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-        self.vectorstore = FAISS.load_local(
-            f"data/{self.subject}/{self.examiner}/{self.subject}-{self.examiner}-vectorDatabase",
-            self.embedding_model
+        self.config = load_subject_config(subject, examiner)
+
+        # Shared embedding model
+        self.embedding_model = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2"
         )
-        self.llm_model = "gpt-4o"
-        self.spec_llm_model = "gpt-4o"
-        self.llm = ChatOpenAI(model_name=self.llm_model, temperature=0)
-        self.spec_llm = ChatOpenAI(model_name=self.spec_llm_model, temperature=0)
-        self.image_llm = ChatOpenAI(model_name=self.llm_model, temperature=0)
-        self.spec_retriever = self.vectorstore.as_retriever(search_type="similarity", search_kwargs={
-            "k": int(self.subject_info["spec_search_kwargs_k"]),
-            "filter": {"type": "Specification"}
-        })
-        self.ms_retriever = self.vectorstore.as_retriever(search_type="mmr", search_kwargs={
-            "k": int(self.subject_info["ms_search_kwargs_k"]),
-            "filter": {"type": "MarkScheme"}
-        })
-        self.ms_qa_chain = RetrievalQA.from_chain_type(llm=self.llm, retriever=self.ms_retriever)
-        self.spec_qa_chain = RetrievalQA.from_chain_type(llm=self.spec_llm, retriever=self.spec_retriever)
-        with open(f"data/{self.subject}/{self.examiner}/questions.pkl", "rb") as file:
-            self.questions = pickle.load(file)
-        with open(f"data/{self.subject}/{self.examiner}/msquestions.pkl", "rb") as file:
-            self.mark_schemes = pickle.load(file)
-        self.prompts = self.load_inputs("prompts")
-        self.queries = self.load_inputs("queries")
-        self.client = OpenAI()
-        if debug:
-            print("Initializing complete\n")
-            print(self.prompts)
-            print(self.queries)
 
-    def get_subject_info(self):
-        with open("subject_info.txt", "r") as file:
-            subject_info_file = file.read().split("\n")
+        # Vector store and retrievers
+        vdb_path = f"data/{subject}/{examiner}/{subject}-{examiner}-vectorDatabase"
+        if not os.path.exists(vdb_path):
+            root_dir = os.path.dirname(os.path.abspath(__file__))
+            vdb_path = os.path.join(root_dir, "data", subject, examiner, f"{subject}-{examiner}-vectorDatabase")
+        self.vectorstore = FAISS.load_local(
+            vdb_path, self.embedding_model, allow_dangerous_deserialization=True
+        )
 
-        subject = {}
-        subject_info = {}
-        for line in subject_info_file:
-            info = line.split(" ")
-            if len(info) == 1:
-                try:
-                    subject_info[subject_name] = subject
-                    subject = {}
-                    subject_name = info[0]
-                except:
-                    subject_name = info[0]
-            else:
-                subject[info[0]] = info[1]
+        self.spec_retriever = self.vectorstore.as_retriever(
+            search_type="similarity",
+            search_kwargs={
+                "k": self.config.spec_search_kwargs_k,
+                "filter": {"type": "Specification"},
+            },
+        )
+        self.ms_retriever = self.vectorstore.as_retriever(
+            search_type="mmr",
+            search_kwargs={
+                "k": self.config.ms_search_kwargs_k,
+                "filter": {"type": "MarkScheme"},
+            },
+        )
 
-        return subject_info[f"{self.subject}-{self.examiner}"]
+        # Single shared LLM client (replaces 3 identical instances)
+        self.llm_client = LLMClient(model="gpt-4o", temperature=0)
 
-    def choose_relevant_parent_description(self, subtopic_info):
-        best = [0, ""]
-        for question in self.questions:
-            if question["type"] == "parent_question":
-                description = question["parent_question_description"]
-                similarity = self.semantic_similarity(description, subtopic_info)
-                if similarity > best[0]:
-                    best = [similarity, description]
-        return best[1]
+        # QA chains
+        self.spec_qa_chain = RetrievalQA.from_chain_type(
+            llm=self.llm_client.llm, retriever=self.spec_retriever
+        )
+        self.ms_qa_chain = RetrievalQA.from_chain_type(
+            llm=self.llm_client.llm, retriever=self.ms_retriever
+        )
 
-    def semantic_similarity(self, x, y, model="text-embedding-3-small"):
-        embeddings_resp = self.client.embeddings.create(
-            model=model,
-            input=[x, y]
-        ).data
+        # Load question data and mark schemes from vector store
+        self.questions, self.mark_schemes = self._load_from_vectorstore()
 
-        emb_x = np.array(embeddings_resp[0].embedding)
-        emb_y = np.array(embeddings_resp[1].embedding)
-        sim = np.dot(emb_x, emb_y) / (np.linalg.norm(emb_x) * np.linalg.norm(emb_y))
-        return sim
+        # Load prompt and query templates
+        root_dir = os.path.dirname(os.path.abspath(__file__))
+        prompts_path = "prompts" if os.path.exists("prompts") else os.path.join(root_dir, "prompts")
+        queries_path = "queries" if os.path.exists("queries") else os.path.join(root_dir, "queries")
+        self.prompts = self._load_templates(prompts_path)
+        self.queries = self._load_templates(queries_path)
 
-    def semantic_similarity_score_list(self, unused, used, model="text-embedding-3-small"):
-        embeddings_unused_resp = self.client.embeddings.create(model=model, input=unused).data
-        embeddings_used_resp = self.client.embeddings.create(model=model, input=used).data
-        embeddings_unused = [np.array(item.embedding) for item in embeddings_unused_resp]
-        embeddings_used = [np.array(item.embedding) for item in embeddings_used_resp]
+        # Similarity engine (batched API calls)
+        self.similarity = SimilarityEngine(self.llm_client, self.embedding_model)
 
-        scores = []
-        for i, emb_a in enumerate(embeddings_unused):
-            sims = []
-            for emb_b in embeddings_used:
-                sim = np.dot(emb_a, emb_b) / (np.linalg.norm(emb_a) * np.linalg.norm(emb_b))
-                sims.append(sim)
-            score = max(s for s in sims)
-            scores.append((unused[i], score))
+        # Exam structure builder
+        self.structure_builder = ExamStructureBuilder(
+            config=self.config,
+            questions=self.questions,
+        )
 
-        scores.sort(key=lambda x: x[1], reverse=True)
-        return scores
+        # Question generator
+        self.question_generator = QuestionGenerator(
+            config=self.config,
+            llm_client=self.llm_client,
+            similarity_engine=self.similarity,
+            questions=self.questions,
+            prompts=self.prompts,
+            queries=self.queries,
+            spec_qa_chain=self.spec_qa_chain,
+            embedding_model=self.embedding_model,
+        )
 
-    def pick_random_from_lower_half(self, scores):
-        if len(scores) == 1:
-            return scores[0]
-        scores = sorted(scores, key=lambda x: x[1], reverse=True)
+        # Exam marker
+        self.exam_marker = ExamMarker(
+            config=self.config,
+            llm_client=self.llm_client,
+            similarity_engine=self.similarity,
+            questions=self.questions,
+            mark_schemes=self.mark_schemes,
+            prompts=self.prompts,
+            queries=self.queries,
+            spec_qa_chain=self.spec_qa_chain,
+            ms_qa_chain=self.ms_qa_chain,
+            subject=subject,
+            examiner=examiner,
+            embedding_model=self.embedding_model,
+        )
 
-        half_index = len(scores) // 2
-        lower_half = scores[half_index:]
+        # Exam quality analyzer
+        self.quality_analyzer = ExamQualityAnalyzer(self)
 
-        if not lower_half:
-            return None
-        a = random.choice(lower_half)
-        if isinstance(a[0], tuple):
-            return a[0][0]
-        else:
-            return a[0]
+        # Feedback quality analyzer
+        self.feedback_analyzer = FeedbackQualityAnalyzer(self)
 
-    def load_inputs(self, folder_path):
-        inputs = {}
+        logger.info("Initialization complete")
+
+    def _load_from_vectorstore(self) -> tuple[list[dict], list[dict]]:
+        """Load questions and mark schemes directly from the FAISS database docstore.
+
+        Returns:
+            A tuple of (questions_list, mark_schemes_list).
+        """
+        questions = []
+        mark_schemes = []
+        
+        # FAISS docstore stores all documents in a local dict
+        all_docs = list(self.vectorstore.docstore._dict.values())
+        logger.info("Retrieved %d total documents from vector database", len(all_docs))
+
+        for doc in all_docs:
+            meta = doc.metadata.copy()
+            doc_type = meta.get("type", "")
+
+            if doc_type == "QuestionPaper":
+                # Reconstruct question dict
+                q_dict = meta.copy()
+                q_dict["question_content"] = doc.page_content
+                # Restore 'type' from 'q_type' to match expected schema downstream
+                if "q_type" in q_dict:
+                    q_dict["type"] = q_dict.pop("q_type")
+                
+                # De-serialize parent question structure
+                if "parent_question_structure" in q_dict and isinstance(q_dict["parent_question_structure"], str):
+                    try:
+                        q_dict["parent_question_structure"] = json.loads(q_dict["parent_question_structure"])
+                    except json.JSONDecodeError:
+                        logger.error("Failed to decode parent_question_structure: %s", q_dict["parent_question_structure"])
+                
+                questions.append(q_dict)
+
+            elif doc_type == "MarkScheme" or meta.get("doc_class") == "mark_scheme":
+                # Reconstruct mark scheme dict
+                ms_dict = meta.copy()
+                ms_dict["question_content"] = doc.page_content
+                mark_schemes.append(ms_dict)
+
+        logger.info("Loaded %d questions and %d mark schemes from vector database", len(questions), len(mark_schemes))
+        return questions, mark_schemes
+
+    @staticmethod
+    def _load_templates(folder_path: str) -> dict[str, str]:
+        """Load all prompt/query template files from a folder.
+
+        Strips .txt extensions from filenames to create dictionary keys.
+
+        Args:
+            folder_path: Path to the templates folder.
+
+        Returns:
+            Dict mapping template names to their content.
+        """
+        templates: dict[str, str] = {}
         for filename in os.listdir(folder_path):
             full_path = os.path.join(folder_path, filename)
-            with open(full_path, "r") as file:
-                content = file.read()
-            inputs[filename.replace(".txt", "")] = content
-        return inputs
+            if os.path.isfile(full_path):
+                with open(full_path, "r") as file:
+                    content = file.read()
+                key = filename.replace(".txt", "")
+                templates[key] = content
+        logger.debug("Loaded %d templates from %s", len(templates), folder_path)
+        return templates
 
-    def test_qa(self, type, query):
-        if type == "ms":
-            retriever = self.ms_retriever
-            qa_chain = self.ms_qa_chain
-        else:
-            retriever = self.spec_retriever
-            qa_chain = self.spec_qa_chain
-        # docs = retriever.invoke(query)
+    # --- Convenience methods that delegate to sub-modules ---
 
-        # print("\n--- Retrieved Chunks ---")
-        # for i, doc in enumerate(docs):
-        #     print(f"\nChunk {i + 1}:\n{doc.page_content}\n")
+    def make_exam(
+        self, exam_topic: str, total_marks: int, topics: list[str]
+    ) -> dict[str, Any]:
+        """Generate a complete exam.
 
-        result = qa_chain.invoke({"query": query})
+        Args:
+            exam_topic: Broad exam category (e.g., "Higher").
+            total_marks: Total marks for the exam.
+            topics: List of topic areas to cover.
 
-        # print("\n--- LLM Answer ---")
-        # print(result["result"])
-        return result["result"]
-
-    def test_llm(self, input):
-        content = self.llm.invoke(input).content
-        return content
-
-    def convert_exam_structure(self, base_exam_structure, topics):
-        n = len(base_exam_structure)
-        k = len(topics)
-        chunk_size = n // k
-        remainder = n % k
-
-        result = {}
-        start = 0
-
-        for i, key in enumerate(topics):
-            end = start + chunk_size + (1 if i < remainder else 0)
-            result[key] = base_exam_structure[start:end]
-            start = end
-
-
-        # prompt = self.prompts["format_exam_structure"].format(
-        #     base_exam_structure=result,
-        #     user_input=user_input,
-        #     marks=marks
-        # )
-        # result = json.loads(self.llm.invoke(prompt).content)
-        return result
-
-    def flatten(self, lst):
-        try:
-            result = 0
-            for item in lst:
-                if isinstance(item, list):
-                    for a in item:
-                        result += a
-                else:
-                    result += item
-            return result
-        except:
-            return lst
-
-    def get_past_exam_structures(self, topic):
-        current_exam = ""
-        exam_marks = []
-        possible_marks_exams = []
-        for question in self.questions:
-            if question["topic"] == topic and (question["type"] == "parent_question" or question["type"] == "basic_question"):
-                if question["exam"] != current_exam:
-                    if len(exam_marks) > 0:
-                        possible_marks_exams.append(exam_marks)
-                    exam_marks = []
-                    current_exam = question["exam"]
-                if question["type"] == "parent_question":
-                    marks = [self.flatten(question["parent_question_structure"]), "parent"]
-                else:
-                    marks = [question["marks"], "basic"]
-                exam_marks.append(marks)
-        return possible_marks_exams
-
-    def make_exam_structure(self, marks_of_exam, topic):
-        past_exam_structures = self.get_past_exam_structures(topic)
-        average_marks_per_question = sum(mark[0] for mark in past_exam_structures[0]) / len(past_exam_structures[0])
-        n_questions = round(marks_of_exam / average_marks_per_question)
-        while True:
-            exam_structure = []
-            last_type = ""
-            marks_left = marks_of_exam
-            for i in range(n_questions):
-                possible_marks_for_question = []
-                for exam in past_exam_structures:
-                    try:
-                        possible_marks_for_question.append(exam[i])
-                    except:
-                        if debug: print(len(exam), past_exam_structures.index(exam))
-                possible_marks = [mark for mark in possible_marks_for_question if mark[0] <= marks_left]
-                try:
-                    best_mark = random.choice(possible_marks)
-                except:
-                    best_mark = [0, last_type]
-                exam_structure.append(best_mark)
-                marks_left -= best_mark[0]
-                last_type = best_mark[1]
-            if marks_left != 0:
-                exam_structure[-1][0] += marks_left
-
-            try:
-                final_exam_structure = []
-                if debug: print(exam_structure)
-                i = 0
-                q_no = 0
-                last_exam = ""
-                for question in exam_structure:
-                    structure = question[0]
-                    if question[1] == "parent":
-                        possible_structures = []
-                        for q in self.questions:
-                            if q["type"] == "parent_question" or q["type"] == "basic_question":
-                                q_no += 1
-                                if q["exam"] != last_exam:
-                                    last_exam = q["exam"]
-                                    q_no = 0
-                                if self.flatten(q["parent_question_structure"]) == question[0] and q["topic"] == topic and (q_no == exam_structure.index(question) or not eval(self.subject_info["question_no_importance"])):
-                                    possible_structures.append(q["parent_question_structure"])
-                        structure = random.choice(possible_structures)
-                        q_no += 1
-                    final_exam_structure.append(structure)
-                    i += 1
-                print(final_exam_structure)
-                return final_exam_structure
-            except Exception as error:
-                if debug:
-                    print("An error occurred:", type(error).__name__, "–", error)
-
-    def get_subtopics(self, question_topic):
-        specification_result = self.get_specification_result(question_topic)
-        list_spec_subtopics = self.format_spec_subtopics(specification_result)
-
-        if debug:
-            print("\nSPEC TOPIC INFO")
-            print(specification_result)
-            print("\nSPEC TOPIC LIST -FINAL")
-            print(list_spec_subtopics)
-
-        return list_spec_subtopics
-
-    def get_spec_point_raw(self, question_topic):
-        query = self.queries["get_spec_point_for_topic"].format(
-            question_topic=question_topic
-        )
-        return self.test_qa("spec", query)
-
-    def format_spec_point(self, spec_point_raw):
-        prompt = self.prompts["retrieve_subtopic_spec_point"].format(
-            spec_point_raw=spec_point_raw,
-            spec_point_length=1
-        )
-        return self.llm.invoke(prompt).content
-
-    def get_specification_result(self, question_topic):
-        query = self.queries["get_topic_info"].format(
-            question_topic=question_topic,
-        )
-        return self.test_qa("spec", query)
-
-    def format_spec_subtopics(self, specification_result):
-        prompt = self.prompts["format_subtopics_from_spec"].format(
-            specification_result=specification_result
-        )
-        subtopics = self.test_llm(prompt)
-        print(subtopics)
-        return json.loads(subtopics)
-
-    def process_questions_for_subtopics(self, topic_of_exam, specification_result):
-        filtered_questions = []
-        subtopics_from_questions = []
-
-        for question in self.questions:
-            if question["topic"] == topic_of_exam and question["examiner"] == self.examiner:
-                filtered_questions.append(question["content"])
-
-                if len(filtered_questions) == self.EXAMPLE_QUESTIONS:
-                    subtopics_from_questions += self.process_question_batch(
-                        topic_of_exam, filtered_questions, specification_result
-                    )
-                    filtered_questions.clear()
-
-        return subtopics_from_questions
-
-    def process_question_batch(self, topic_of_exam, filtered_questions, specification_result):
-        prompt = self.prompts["get_subtopics_from_questions"].format(
-            topic_of_exam=topic_of_exam,
+        Returns:
+            Dict with exam structure and generated questions.
+        """
+        return self.question_generator.generate_exam(
+            exam_topic=exam_topic,
+            total_marks=total_marks,
+            topics=topics,
             subject=self.subject,
-            examiner=self.examiner,
-            filtered_questions=filtered_questions
+            structure_builder=self.structure_builder,
         )
-        result = self.llm.invoke(prompt).content
-        topics_of_questions = json.loads(result)
 
-        prompt = self.prompts["filter_irrelevant_topics_from_questions"].format(
-            topic_of_exam=topic_of_exam,
-            subject=self.subject,
-            examiner=self.examiner,
-            specification_result=specification_result,
-            topics_of_questions=topics_of_questions
-        )
-        result = self.llm.invoke(prompt).content
-        filtered_topics = json.loads(result)
+    def mark_question(self) -> str:
+        """Mark a question from user-uploaded files.
 
-        if debug:
-            print(topics_of_questions)
-            print(filtered_topics)
+        Returns:
+            Marking feedback string.
+        """
+        return self.exam_marker.mark_question_from_files()
 
-        return filtered_topics
+    def mark_exam(self, questions: list[dict], topic: str) -> list[dict]:
+        """Mark a full exam.
 
-    def get_common_subtopics(self, subtopics_from_questions, list_spec_subtopics):
-        prompt = self.prompts["get_common_subtopics"].format(
-            subject=self.subject,
-            examiner=self.examiner,
-            subtopics_from_questions=subtopics_from_questions,
-            list_spec_subtopics=list_spec_subtopics
-        )
-        return self.llm.invoke(prompt).content
+        Args:
+            questions: List of question dicts with answers.
+            topic: The exam topic.
 
-    def get_subtopic_info(self, subtopic, topic):
-        query = self.queries["get_subtopic_info"].format(
+        Returns:
+            List of marking result dicts.
+        """
+        return self.exam_marker.mark_exam(questions, topic)
+
+    def revision_materials(self, topic: str) -> str:
+        """Generate revision materials for a topic.
+
+        Args:
+            topic: The topic to generate materials for.
+
+        Returns:
+            Revision materials text.
+        """
+        return self.question_generator.get_revision_materials(
             topic=topic,
-            subtopic=subtopic
-        )
-        result = self.test_qa("spec", query)
-        return result
-
-    def get_subsubtopic_info(self, subsubtopic, subtopic, topic):
-        query = self.queries["get_subsubtopic_info"].format(
-            topic=topic,
-            subtopic=subtopic,
-            subsubtopic=subsubtopic
-        )
-        result = self.spec_qa_chain.invoke(query)["result"]
-        return result
-
-    def get_random_objects(self, marks, topic, object_list, n, comparison):
-        filtered_objects = []
-        random.shuffle(object_list)
-        for obj in object_list[:n*2]:
-            if obj["topic"] == topic and obj["marks"] == marks:
-                score = self.semantic_similarity(comparison, obj["question_content"])
-                filtered_objects.append([score, obj["question_content"]])
-        objects = []
-        filtered_objects.sort()
-        for obj in filtered_objects[:n]:
-            objects.append(obj[1])
-        return objects
-
-    def make_question(self, marks, exam_topic, question_content, subtopic_info, parent_description, subtopic):
-
-        random_questions = self.get_random_objects(marks, exam_topic, self.questions, self.EXAMPLE_QUESTIONS, subtopic)
-        prompt_extention = ""
-        if question_content != "":
-            prompt_extention = self.prompts["question_prompt_extention"].format(
-                question_content=question_content,
-                parent_description=parent_description
-            )
-        prompt = self.prompts["make_question"].format(
             subject=self.subject,
-            examiner=self.examiner,
-            marks=marks,
-            random_questions=random_questions,
-            topic_info=subtopic_info,
-            subtopic=subtopic
-        ) + "\n" + prompt_extention
-
-
-        return self.llm.invoke(prompt).content
-
-    def get_topics(self, user_input):
-        prompt = self.prompts["get_topics_from_user"].format(
-            user_input=user_input
+            spec_qa_chain=self.spec_qa_chain,
         )
-        return self.llm.invoke(prompt).content
 
-    def make_parent_description(self, subtopic, exam_topic, question_content, subtopic_info, parent_description):
-        valid_descriptions = []
-        for question in self.questions:
-            if question["type"] == "parent_question" and question["topic"] == exam_topic:
-                valid_descriptions.append(question)
-        n = int(self.subject_info["example_descriptions"])
-        random_descriptions = []
-        random.shuffle(valid_descriptions)
-        for description in valid_descriptions[:n*2]:
-            score = self.semantic_similarity(subtopic, description["parent_question_description"])
-            random_descriptions.append([score, description["question_content"]])
-        close_descriptions = []
-        random_descriptions.sort()
-        for description in random_descriptions[:n]:
-            close_descriptions.append(description[1])
-        if debug:
-            for a in close_descriptions: print(a)
-        prompt_extention = ""
-        if question_content != "":
-            prompt_extention = self.prompts["question_prompt_extention"].format(
-                question_content=question_content,
-                parent_description=parent_description
-            )
-        prompt = self.prompts["extract_relevant_text"].format(
-            random_questions=random_descriptions,
-        ) + "\n" + prompt_extention
-        random_descriptions = self.llm.invoke(prompt).content
-        if debug:
-            print(subtopic_info)
-            print(random_descriptions)
-        prompt = self.prompts["make_parent_description"].format(
-            random_questions=random_descriptions,
-            subtopic=subtopic,
-            subtopic_info=subtopic_info
-        )
-        return self.llm.invoke(prompt).content
+    def analyze_exam(self, generated_exam: dict) -> dict:
+        """Analyze the quality of a generated exam compared to past papers.
 
-    def adapt_question(self, marks, exam_topic, subtopic_info, subtopic, question_content, parent_description):
-        prompt_extention = ""
-        if question_content != "":
-            prompt_extention = self.prompts["question_prompt_extention"].format(
-                question_content=question_content,
-                parent_description=parent_description
-            )
-        example_question = self.get_random_objects(marks, exam_topic, self.questions, self.EXAMPLE_QUESTIONS, subtopic)
-        prompt = self.prompts["adapt_question"].format(
-            subject=self.subject,
-            subtopic_info=subtopic_info,
-            example_question=example_question,
-            subtopic=subtopic
-        ) + "\n\n"+ prompt_extention
-        return self.llm.invoke(prompt).content
+        Args:
+            generated_exam: Dict with exam structure and generated questions.
 
-    def improve_question_coherance(self, question_content):
-        prompt = self.prompts["improve_question_coherance"].format(
-            subject=self.subject,
-            question_content=question_content
-        )
-        return self.llm.invoke(prompt).content
+        Returns:
+            Dict containing the quality analysis report.
+        """
+        return self.quality_analyzer.analyze_exam_quality(generated_exam)
 
-    def make_exam(self, exam_topic, user_input, marks, topics):
-        exam_structure = self.convert_exam_structure(self.make_exam_structure(marks, exam_topic), topics)
-        print(f"EXAM STRUCTURE: {exam_structure}")
-        letters = "abcdefghijklmno"
-        romans = ["i", "ii", "iii", "iv", "v"]
-        for topic in exam_structure.keys():
-            subtopics = self.get_subtopics(exam_topic + " " + topic)
-            print(subtopics)
-            used = []
-            if debug: print(f"POSSIBLE SUBTOPICS: {subtopics}")
-            i = 0
-            for mark in exam_structure[topic]:
-                i += 1
-                print(f"\nQUESTION {i}: {self.flatten(mark)} MARKS")
-                if len(used) == 0:
-                    subtopic = random.choice(subtopics)
-                else:
-                    scores = self.semantic_similarity_score_list(subtopics, used)
-                    subtopic = self.pick_random_from_lower_half(scores)
-                if debug: print(f"Subtopic: {subtopic}")
-                subtopics.remove(subtopic)
-                used.append(subtopic)
-                subtopic_info = self.get_subtopic_info(subtopic, topic)
-                print(subtopic.upper())
-                if isinstance(mark, int):
-                    question_content = f"{i}) " + self.make_question(mark, exam_topic, "", subtopic_info, "", subtopic) + f" [{mark} marks]\n\n"
-                    print(question_content)
-                else:
-                    parent_description = self.choose_relevant_parent_description(subtopic)
+    def analyze_feedback(
+        self,
+        question: str,
+        marks: int,
+        mark_scheme: str,
+        answer: str,
+        feedback: str,
+    ) -> dict:
+        """Analyze the quality of marking feedback given to a student answer.
 
-                    question_content = parent_description + f"\n\n"
-                    print(f"{i}) " + question_content)
-                    subsubtopics = self.format_spec_subtopics(subtopic_info)
-                    print("Subsubtopics:", subsubtopics)
-                    used_subsubtopics = []
-                    z = -1
-                    for x in mark:
-                        z += 1
-                        if len(used_subsubtopics) < 2:
-                            subsubtopic = random.choice(subsubtopics)
-                        else:
-                            scores = self.semantic_similarity_score_list(subsubtopics, used_subsubtopics)
-                            subsubtopic = self.pick_random_from_lower_half(scores)
-                        subsubtopics.remove(subsubtopic)
-                        used_subsubtopics.append(subsubtopic)
-                        subsubtopic_info = self.get_subsubtopic_info(subsubtopic, subtopic, topic)
-                        print("Subsubtopic: ", subsubtopic)
-                        if isinstance(x, int):
-                            question = self.make_question(x, exam_topic, subsubtopic_info, subsubtopic, question_content, parent_description)
-                            new_question_content = question + f" [{x} marks]\n\n"
-                            question_content += new_question_content
-                            print(f"{letters[z]}) " + new_question_content)
-                        else:
-                            if z != 0:
-                                child_parent_description = self.make_parent_description(subsubtopic, exam_topic, question_content, subsubtopic_info, parent_description)
-                                new_question_content = child_parent_description + "\n\n"
-                                subsubtopic_info = subtopic_info
-                            else:
-                                child_parent_description = parent_description
-                                new_question_content = "\n\n"
-                            question_content += new_question_content
-                            print(f"{letters[z]}) " + new_question_content)
-                            y = -1
-                            for a in x:
-                                y += 1
-                                description = parent_description + "\n" + child_parent_description
-                                question = self.make_question(a, exam_topic, subsubtopic_info, subsubtopic, question_content, description)
-                                new_question_content = question + f" [{a} marks]\n\n"
-                                question_content += new_question_content
-                                print(f"{romans[y]}) " + new_question_content)
+        Args:
+            question: The question text.
+            marks: Total marks allocated.
+            mark_scheme: The mark scheme content.
+            answer: The student's answer.
+            feedback: The marking feedback text.
 
-    def create_ms(self, question, marks, topic):
-        random_mark_schemes = self.get_random_objects(marks, topic, self.mark_schemes, int(self.subject_info["example_ms"]), question)
-        structure = self.test_llm(self.prompts["create_ms_structure"].format(subject=self.subject, random_mark_schemes=random_mark_schemes))
-        info = self.test_qa("spec", self.queries["get_question_related_info"].format(question=question))
-        print("INFO")
-        print(info)
-        ms = self.test_llm(self.prompts["create_new_markscheme"].format(
+        Returns:
+            Dict containing the feedback quality report.
+        """
+        return self.feedback_analyzer.analyze_feedback(
             question=question,
-            subject=self.subject,
-            structure=structure,
-            info=info,
-            marks=marks
-        ))
-        return ms
-
-
-    def mark_answer(self, answer, mark_scheme, question, marks):
-        command_word = self.test_llm(self.prompts["get_command_word"].format(question=question))
-        advice = self.test_qa("ms", f"""Give marking advice for {marks} mark '{command_word}' questions""")
-        prompt = self.prompts["format_mark_scheme"].format(
-            mark_scheme=mark_scheme
-        )
-        mark_scheme = self.test_llm(prompt)
-        prompt = self.prompts["mark_answer"].format(
-            subject=self.subject,
+            marks=marks,
             mark_scheme=mark_scheme,
             answer=answer,
+            feedback=feedback,
+        )
+
+def format_exam_as_markdown(subject: str, examiner: str, exam_topic: str, exam_data: dict) -> str:
+    """Format a generated exam dictionary into a clean, readable markdown document.
+    
+    Args:
+        subject: Subject name.
+        examiner: Exam board name.
+        exam_topic: Exam topic.
+        exam_data: Dict with exam structure and generated questions.
+        
+    Returns:
+        Formatted markdown string.
+    """
+    md = []
+    md.append(f"# GCSE {subject} ({examiner}) - {exam_topic} Exam")
+    md.append("")
+    
+    # Calculate total marks from questions
+    total_marks = 0
+    questions_by_topic = exam_data.get("questions", {})
+    for topic, q_list in questions_by_topic.items():
+        for q in q_list:
+            if "sub_questions" in q:
+                for sq in q["sub_questions"]:
+                    if "sub_parts" in sq:
+                        for gq in sq["sub_parts"]:
+                            total_marks += gq.get("marks", 0)
+                    else:
+                        total_marks += sq.get("marks", 0)
+            else:
+                total_marks += q.get("marks", 0)
+                
+    md.append(f"**Total Marks:** {total_marks}")
+    md.append("")
+    
+    for topic, q_list in questions_by_topic.items():
+        md.append(f"## Topic: {topic}")
+        md.append("")
+        for q in q_list:
+            q_num = q.get("number", "")
+            subtopic = q.get("subtopic", "")
+            
+            # Check if it's a parent question with sub-parts
+            if "sub_questions" in q:
+                parent_desc = q.get("parent_description", "")
+                md.append(f"### Question {q_num} (Subtopic: {subtopic})")
+                if parent_desc:
+                    md.append(parent_desc)
+                    md.append("")
+                
+                for sq in q["sub_questions"]:
+                    label = sq.get("label", "")
+                    
+                    if "sub_parts" in sq:
+                        context = sq.get("context", "")
+                        md.append(f"**{label}** {context}")
+                        md.append("")
+                        for gq in sq["sub_parts"]:
+                            g_label = gq.get("label", "")
+                            g_text = gq.get("text", "")
+                            g_marks = gq.get("marks", 0)
+                            md.append(f"  * **{g_label}** {g_text} *({g_marks} mark{'s' if g_marks > 1 else ''})*")
+                            md.append("")
+                    else:
+                        sq_text = sq.get("text", "")
+                        sq_marks = sq.get("marks", 0)
+                        md.append(f"* **{label}** {sq_text} *({sq_marks} mark{'s' if sq_marks > 1 else ''})*")
+                        md.append("")
+            else:
+                # Standalone question
+                q_text = q.get("text", "")
+                q_marks = q.get("marks", 0)
+                md.append(f"### Question {q_num} (Subtopic: {subtopic}) *({q_marks} mark{'s' if q_marks > 1 else ''})*")
+                md.append(q_text)
+                md.append("")
+                
+    return "\n".join(md)
+
+
+if __name__ == "__main__":
+    import sys
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
+    # 1. Biology (Edexcel)
+    print("\n==================================================")
+    print("GENERATING BIOLOGY EXAM")
+    print("==================================================")
+    assistant_bio = GcseAssistant("Biology", "Edexcel")
+    marks_bio = 100
+    exam_topic_bio = "Higher"
+    # topics_bio = [
+    #     "Topic 6 – Plant structures and their functions",
+    # ]
+    # result_bio = assistant_bio.make_exam(exam_topic_bio, marks_bio, topics_bio)
+    # print("Generated Exam (Bio):")
+    # print(json.dumps(result_bio, indent=2))
+    # print("\n--- Running Bio Exam Quality Analysis ---")
+    # report_bio = assistant_bio.analyze_exam(result_bio)
+    # report_bio_md = assistant_bio.quality_analyzer.generate_markdown_report(report_bio)
+    # print(report_bio_md)
+    #
+    # # Format and save Biology Exam & Report as a markdown file
+    # exam_bio_md = format_exam_as_markdown("Biology", "Edexcel", exam_topic_bio, result_bio)
+    # full_bio_content = f"{exam_bio_md}\n\n---\n\n{report_bio_md}"
+    # bio_filename = "Biology_Edexcel_exam.md"
+    # with open(bio_filename, "w", encoding="utf-8") as f:
+    #     f.write(full_bio_content)
+    # print(f"\n[SUCCESS] Saved Biology exam and quality report to: {bio_filename}")
+
+    # 2. Religious Studies (AQA)
+    # print("\n==================================================")
+    # print("GENERATING RELIGIOUS STUDIES EXAM")
+    # print("==================================================")
+    # assistant_rs = GcseAssistant("ReligiousStudies", "AQA")
+    # marks_rs = 100
+    # exam_topic_rs = "Christianity"
+    # topics_rs = [
+    #     "Beliefs",
+    # ]
+    # result_rs = assistant_rs.make_exam(exam_topic_rs, marks_rs, topics_rs)
+    # print("Generated Exam (RS):")
+    # print(json.dumps(result_rs, indent=2))
+    # print("\n--- Running RS Exam Quality Analysis ---")
+    # report_rs = assistant_rs.analyze_exam(result_rs)
+    # report_rs_md = assistant_rs.quality_analyzer.generate_markdown_report(report_rs)
+    # print(report_rs_md)
+    #
+    # # Format and save RS Exam & Report as a markdown file
+    # exam_rs_md = format_exam_as_markdown("ReligiousStudies", "AQA", exam_topic_rs, result_rs)
+    # full_rs_content = f"{exam_rs_md}\n\n---\n\n{report_rs_md}"
+    # rs_filename = "ReligiousStudies_AQA_exam.md"
+    # with open(rs_filename, "w", encoding="utf-8") as f:
+    #     f.write(full_rs_content)
+    # print(f"\n[SUCCESS] Saved Religious Studies exam and quality report to: {rs_filename}")
+    #
+
+    # 3. Feedback Quality Analysis
+    print("\n==================================================")
+    print("RUNNING FEEDBACK QUALITY ANALYSIS")
+    print("==================================================")
+    question_file = "user_data/question/question.txt"
+    ms_file = "user_data/ms/ms.txt"
+    answer_file = "user_data/answer/answer.txt"
+
+    if os.path.exists(question_file) and os.path.exists(ms_file) and os.path.exists(answer_file):
+        with open(question_file, "r", encoding="utf-8") as f:
+            question_text = f.read().strip()
+        with open(ms_file, "r", encoding="utf-8") as f:
+            mark_scheme_text = f.read().strip()
+        with open(answer_file, "r", encoding="utf-8") as f:
+            answer_text = f.read().strip()
+
+        try:
+            marks = assistant_bio.exam_marker.get_marks_from_question(question_text)
+        except Exception:
+            marks = 6
+
+        print("Marking student answer...")
+        feedback_str = assistant_bio.exam_marker.mark_answer(
+            answer=answer_text,
+            mark_scheme=mark_scheme_text,
+            question=question_text,
+            marks=marks
+        )
+        print(f"Generated Feedback:\n{feedback_str}\n")
+
+        print("Analyzing feedback quality...")
+        feedback_report = assistant_bio.analyze_feedback(
+            question=question_text,
             marks=marks,
+            mark_scheme=mark_scheme_text,
+            answer=answer_text,
+            feedback=feedback_str
         )
-        return self.test_llm(prompt)
 
-
-
-    def load_ms(self):
-        dbm = DatabaseManager(self.subject, self.examiner)
-        dbm.add_folder_database(f"user_data/user_ms", f"user_data/ms_vdb")
-
-    def get_marks(self, question):
-        prompt = self.prompts["extract_marks"].format(
-            question=question
+        report_filename = "feedback_quality_report.md"
+        assistant_bio.feedback_analyzer.save_report(
+            filepath=report_filename,
+            question=question_text,
+            marks=marks,
+            mark_scheme=mark_scheme_text,
+            answer=answer_text,
+            feedback=feedback_str,
+            report=feedback_report
         )
-        return int(self.test_llm(prompt))
-
-    def exam_type_of_question(self, question):
-        exam_types = []
-        for example_question in self.questions:
-            if example_question["topic"] not in exam_types:
-                exam_types.append(example_question["topic"])
-        exam_type = self.test_qa("spec", self.prompts["exam_type_of_question"].format(exam_types=exam_types, question=question))
-        return exam_type
-
-    def mark_question(self):
-        question = {"question": "", "answer": "", "ms": ""}
-        for type in question.keys():
-            directory = f"user_data/{type}"
-            for f in os.listdir(directory):
-                ext = os.path.splitext(f)[1].lower()
-                if ext in [".jpg", ".png", ".jpeg"]:
-                    text = self.image_to_text(directory+"/"+f)
-                elif ext in [".txt", ".md"]:
-                    with open(directory+"/"+f, "r") as file:
-                        text = file.read()
-                else:
-                    print(f"Invalid {type} file format")
-                question[type] += text
-        if question["question"] == "":
-            print("No question")
-        elif question["answer"] == "":
-            print("No answer")
-        else:
-            exam_type = self.exam_type_of_question(question["question"])
-            marks = self.get_marks(question["question"])
-            if question["ms"] == "":
-                question["ms"] = self.create_ms(question["question"], marks, exam_type)
-            model_answer = self.test_llm(self.prompts["model_answer"].format(
-                ms=question["ms"],
-                question=question["question"]
-            ))
-            print("MARK SCHEME")
-            print(question["ms"])
-            print("\n\nMODEL ANSWER")
-            print(model_answer)
-            print("\n\n")
-            return self.mark_answer(question["answer"], question["ms"], question["question"], marks)
-
-
-    def mark_exam(self, questions, topic):
-        directory = "user_data/ms"
-        file_count = len([f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))])
-        print(file_count)
-        if file_count != 0:
-            ms_vdb = FAISS.load_local(f"user_data/ms_vdb", self.embedding_model)
-            ms_retriever = ms_vdb.as_retriever(search_type="similarity", search_kwargs={"k": int(self.subject_info["ms_search_kwargs_k"]), "filter": {"type": "MarkScheme"}})
-            ms_qa_chain = RetrievalQA.from_chain_type(llm=self.llm, retriever=ms_retriever)
-        else:
-            ms_qa_chain = self.ms_qa_chain
-        for question in questions:
-            ms = self.create_ms(question["parent_description"] + "\n" + question["question"], question["marks"], topic)
-            mark = self.mark_answer(question["answer"], ms, question["marks"], question["question"])
-            print("\n\n\n\nMARK SCHEME")
-            print("-------------")
-            print(ms)
-            print("\nSTUDENT ANSWER")
-            print("-------------")
-            print(question["answer"])
-            print("\nRESULT")
-            print("-------------")
-            print(mark)
-
-    def image_to_text(self, img_path):
-        import base64
-        with open(img_path, "rb") as f:
-            img_b64 = base64.b64encode(f.read()).decode("utf-8")
-
-        prompt = self.prompts["read_user_exam_page"]
-
-        msg = HumanMessage(content=[
-            {"type": "text", "text": prompt },
-            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_b64}"}}
-        ])
-        content = self.image_llm.invoke([msg]).content
-        print("Content:", content)
-        return content
-
-
-rs_aqa_assistant = GcseAssistantMakeExams("Biology", "Edexcel")
-
-marks = 48
-exam_topic = "Higher"
-topics = ["Topic 6 – Plant structures and their functions", "Topic 5 – Health, disease and the development of medicines "]
-
-user_input = ""
-rs_aqa_assistant.make_exam(exam_topic, user_input, marks, topics)
-# print(rs_aqa_assistant.mark_question())
-
-
+        print(f"[SUCCESS] Saved feedback evaluation report to: {report_filename}")
+    else:
+        print("[WARNING] Sample files in user_data/ not found. Skipping feedback quality evaluation.")
 

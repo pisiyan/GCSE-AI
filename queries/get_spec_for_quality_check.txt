@@ -1,0 +1,1 @@
+Find the specification details, learning objectives, and curriculum points relevant to the following exam question: {question}

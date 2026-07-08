@@ -1,1 +1,8 @@
 .env
+venv/
+__pycache__/
+.idea/
+*.pkl
+*.pyc
+user_data/
+*.iml

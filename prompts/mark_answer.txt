@@ -8,6 +8,7 @@ Your task:
 Provide a short, concise explanation of:
 - How the student earned the marks awarded.
 - How the answer could be improved to earn full marks.
+-
 
 Format the explanation as bullet points only.
 Output nothing else besides the bullet points and the final overall mark.

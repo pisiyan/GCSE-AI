@@ -1,0 +1,29 @@
+You are an expert GCSE examiner evaluating the quality of a generated exam question.
+Analyze the following question based on the criteria below.
+
+QUESTION CONTENT:
+{question_text}
+
+MARKS ALLOCATED: {marks}
+TOPIC/SUBTOPIC: {subtopic}
+PARENT QUESTION CONTEXT (if any): {parent_context}
+
+CRITERIA:
+1. Clarity & Precision (0-10): Is the question clear, unambiguous, grammatically correct, and easy for GCSE students to understand?
+2. Scientific Accuracy (0-10): Is the content scientifically accurate and free of errors or factual misconceptions?
+3. Age & Level Appropriateness (0-10): Is the vocabulary, difficulty level, and cognitive demand appropriate for a GCSE student (typically age 14-16)?
+4. Mark Alignment (0-10): Does the depth of answer required match the number of marks allocated? E.g., does a 4-mark question require sufficient detail/explanation?
+
+Respond ONLY with a JSON object in the following format:
+{{
+  "clarity_score": <int 0-10>,
+  "clarity_feedback": "<brief feedback>",
+  "accuracy_score": <int 0-10>,
+  "accuracy_feedback": "<brief feedback>",
+  "difficulty_score": <int 0-10>,
+  "difficulty_feedback": "<brief feedback>",
+  "mark_alignment_score": <int 0-10>,
+  "mark_alignment_feedback": "<brief feedback>",
+  "overall_qualitative_score": <float 0-10>,
+  "general_feedback": "<overall qualitative feedback>"
+}}

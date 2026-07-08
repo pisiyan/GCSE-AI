@@ -1,0 +1,237 @@
+{
+  "structure": {
+    "Topic 1 – Key concepts of physics": [
+      [
+        1,
+        1,
+        4
+      ],
+      [
+        1,
+        [
+          1,
+          1,
+          3,
+          3
+        ]
+      ]
+    ],
+    "Topic 2 – Motion and forces": [
+      [
+        1,
+        2,
+        [
+          2,
+          2
+        ],
+        2
+      ],
+      [
+        1,
+        [
+          2,
+          2
+        ],
+        2,
+        3
+      ]
+    ],
+    "Topic 3 – Conservation of energy": [
+      [
+        2,
+        [
+          1,
+          2
+        ],
+        2,
+        2
+      ],
+      [
+        [
+          2,
+          4
+        ],
+        [
+          1,
+          3
+        ]
+      ]
+    ],
+    "Topic 4 – Waves": [
+      [
+        1,
+        1,
+        3,
+        2,
+        [
+          2,
+          2
+        ]
+      ]
+    ],
+    "Topic 5 – Light and the electromagnetic spectrum": [
+      [
+        [
+          3,
+          2
+        ],
+        6
+      ]
+    ],
+    "Topic 6 – Radioactivity": [
+      [
+        [
+          3,
+          4
+        ],
+        6
+      ]
+    ],
+    "Topic 7 – Astronomy": [
+      [
+        [
+          1,
+          3
+        ],
+        2,
+        6
+      ]
+    ]
+  },
+  "questions": {
+    "Topic 1 – Key concepts of physics": [
+      {
+        "number": "1)",
+        "parent_description": "Figure shows details about Topic 1 – Key concepts of physics.",
+        "sub_questions": [
+          {
+            "label": "a)",
+            "text": "Describe Topic 1 – Key concepts of physics.",
+            "marks": 3
+          }
+        ],
+        "subtopic": "Topic 1 – Key concepts of physics"
+      },
+      {
+        "number": "2)",
+        "parent_description": "Figure shows details about Topic 1 – Key concepts of physics.",
+        "sub_questions": [
+          {
+            "label": "a)",
+            "text": "Describe Topic 1 – Key concepts of physics.",
+            "marks": 3
+          }
+        ],
+        "subtopic": "Topic 1 – Key concepts of physics"
+      }
+    ],
+    "Topic 2 – Motion and forces": [
+      {
+        "number": "3)",
+        "parent_description": "Figure shows details about Topic 2 – Motion and forces.",
+        "sub_questions": [
+          {
+            "label": "a)",
+            "text": "Describe Topic 2 – Motion and forces.",
+            "marks": 3
+          }
+        ],
+        "subtopic": "Topic 2 – Motion and forces"
+      },
+      {
+        "number": "4)",
+        "parent_description": "Figure shows details about Topic 2 – Motion and forces.",
+        "sub_questions": [
+          {
+            "label": "a)",
+            "text": "Describe Topic 2 – Motion and forces.",
+            "marks": 3
+          }
+        ],
+        "subtopic": "Topic 2 – Motion and forces"
+      }
+    ],
+    "Topic 3 – Conservation of energy": [
+      {
+        "number": "5)",
+        "parent_description": "Figure shows details about Topic 3 – Conservation of energy.",
+        "sub_questions": [
+          {
+            "label": "a)",
+            "text": "Describe Topic 3 – Conservation of energy.",
+            "marks": 3
+          }
+        ],
+        "subtopic": "Topic 3 – Conservation of energy"
+      },
+      {
+        "number": "6)",
+        "parent_description": "Figure shows details about Topic 3 – Conservation of energy.",
+        "sub_questions": [
+          {
+            "label": "a)",
+            "text": "Describe Topic 3 – Conservation of energy.",
+            "marks": 3
+          }
+        ],
+        "subtopic": "Topic 3 – Conservation of energy"
+      }
+    ],
+    "Topic 4 – Waves": [
+      {
+        "number": "7)",
+        "parent_description": "Figure shows details about Topic 4 – Waves.",
+        "sub_questions": [
+          {
+            "label": "a)",
+            "text": "Describe Topic 4 – Waves.",
+            "marks": 3
+          }
+        ],
+        "subtopic": "Topic 4 – Waves"
+      }
+    ],
+    "Topic 5 – Light and the electromagnetic spectrum": [
+      {
+        "number": "8)",
+        "parent_description": "Figure shows details about Topic 5 – Light and the electromagnetic spectrum.",
+        "sub_questions": [
+          {
+            "label": "a)",
+            "text": "Describe Topic 5 – Light and the electromagnetic spectrum.",
+            "marks": 3
+          }
+        ],
+        "subtopic": "Topic 5 – Light and the electromagnetic spectrum"
+      }
+    ],
+    "Topic 6 – Radioactivity": [
+      {
+        "number": "9)",
+        "parent_description": "Figure shows details about Topic 6 – Radioactivity.",
+        "sub_questions": [
+          {
+            "label": "a)",
+            "text": "Describe Topic 6 – Radioactivity.",
+            "marks": 3
+          }
+        ],
+        "subtopic": "Topic 6 – Radioactivity"
+      }
+    ],
+    "Topic 7 – Astronomy": [
+      {
+        "number": "10)",
+        "parent_description": "Figure shows details about Topic 7 – Astronomy.",
+        "sub_questions": [
+          {
+            "label": "a)",
+            "text": "Describe Topic 7 – Astronomy.",
+            "marks": 3
+          }
+        ],
+        "subtopic": "Topic 7 – Astronomy"
+      }
+    ]
+  }
+}

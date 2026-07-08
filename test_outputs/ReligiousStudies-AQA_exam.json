@@ -1,0 +1,169 @@
+{
+  "structure": {
+    "Beliefs": [
+      1,
+      2,
+      4,
+      5,
+      12,
+      1
+    ],
+    "Practices": [
+      2,
+      4,
+      5,
+      12,
+      0
+    ],
+    "Living the Christian Life": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "Matters of Life and Death": [
+      0,
+      0,
+      0,
+      0,
+      52
+    ]
+  },
+  "questions": {
+    "Beliefs": [
+      {
+        "number": "1)",
+        "text": "Which one of the following is a Catholic sacrament of initiation?  \nPut a tick () in the box next to the correct answer.  \n  \nA Anointing of the Sick  \n  \nB Baptism  \n  \nC Holy Orders  \n  \nD Reconciliation",
+        "marks": 1,
+        "subtopic": "Catholic Christianity"
+      },
+      {
+        "number": "2)",
+        "text": "Give two Christian beliefs about salvation.",
+        "marks": 2,
+        "subtopic": "Beliefs and Teachings"
+      },
+      {
+        "number": "3)",
+        "text": "Explain two ways in which the Church supports local and worldwide communities.",
+        "marks": 4,
+        "subtopic": "The Role of the Church"
+      },
+      {
+        "number": "4)",
+        "text": "Explain two Christian practices related to worship. \n\nRefer to sacred writings or another source of Christian belief and teaching in your answer.",
+        "marks": 5,
+        "subtopic": "Practices"
+      },
+      {
+        "number": "5)",
+        "text": "‘Attending church services is essential for a Christian’s spiritual growth.’\n\nEvaluate this statement.\n\nIn your answer you should:\n• refer to Christian teaching\n• give reasoned arguments to support this statement\n• give reasoned arguments to support a different point of view\n• reach a justified conclusion.",
+        "marks": 12,
+        "subtopic": "Practices"
+      },
+      {
+        "number": "6)",
+        "text": "Which one of the following is a Catholic sacrament of initiation?  \nPut a tick () in the box next to the correct answer.  \n  \nA Anointing of the Sick  \n  \nB Baptism  \n  \nC Holy Orders  \n  \nD Reconciliation",
+        "marks": 1,
+        "subtopic": "Catholic Christianity"
+      }
+    ],
+    "Practices": [
+      {
+        "number": "7)",
+        "text": "Give two forms of Christian worship.",
+        "marks": 2,
+        "subtopic": "Worship and festivals"
+      },
+      {
+        "number": "8)",
+        "text": "Explain two ways in which Catholic social teaching influences the global mission of the Church.",
+        "marks": 4,
+        "subtopic": "The work of the Church"
+      },
+      {
+        "number": "9)",
+        "text": "Explain two ways in which the church influences the local and global community. \n\nRefer to sacred writings or another source of Christian belief and teaching in your answer.",
+        "marks": 5,
+        "subtopic": "The role of the church in the local and worldwide community"
+      },
+      {
+        "number": "10)",
+        "text": "‘The church's involvement in local and global communities is essential for its mission.’ \n\nEvaluate this statement. \n\nIn your answer you should: \n• refer to Christian teaching \n• give reasoned arguments to support this statement \n• give reasoned arguments to support a different point of view \n• reach a justified conclusion.",
+        "marks": 12,
+        "subtopic": "The role of the church in the local and worldwide community"
+      },
+      {
+        "number": "11)",
+        "text": "Explain how Catholic beliefs influence the Church's approach to social teaching and global mission.",
+        "marks": 0,
+        "subtopic": "The work of the Church"
+      }
+    ],
+    "Living the Christian Life": [
+      {
+        "number": "12)",
+        "text": "Explain how Catholic social teaching addresses the issue of poverty.",
+        "marks": 0,
+        "subtopic": "Catholic social teaching"
+      },
+      {
+        "number": "13)",
+        "text": "Explain how Christian beliefs about the nature of God influence moral decision-making.",
+        "marks": 0,
+        "subtopic": "Beliefs and teachings"
+      },
+      {
+        "number": "14)",
+        "text": "Explain how Catholic beliefs influence the practice of confession.",
+        "marks": 0,
+        "subtopic": "Catholic Christianity"
+      },
+      {
+        "number": "15)",
+        "text": "Explain the impact of the church's activities on both local and global communities.",
+        "marks": 0,
+        "subtopic": "The role of the church in the local and worldwide community"
+      },
+      {
+        "number": "16)",
+        "text": "Explain the significance of Christian festivals in worship practices.",
+        "marks": 0,
+        "subtopic": "Practices"
+      }
+    ],
+    "Matters of Life and Death": [
+      {
+        "number": "17)",
+        "text": "Explain religious and ethical perspectives on the origins and value of human life.",
+        "marks": 0,
+        "subtopic": "Origins and Value of Human Life"
+      },
+      {
+        "number": "18)",
+        "text": "Explain religious perspectives on the responsibilities of wealth towards alleviating poverty.",
+        "marks": 0,
+        "subtopic": "Wealth and Poverty"
+      },
+      {
+        "number": "19)",
+        "text": "Explain how societal influences can contribute to criminal behavior.",
+        "marks": 0,
+        "subtopic": "Reasons for Crime"
+      },
+      {
+        "number": "20)",
+        "text": "Explain how religious beliefs influence perspectives on punishment and justice.",
+        "marks": 0,
+        "subtopic": "Religion and Punishment"
+      },
+      {
+        "number": "21)",
+        "text": "Evaluate the significance of religious teachings in shaping ethical perspectives on human rights and social justice.",
+        "marks": 52,
+        "subtopic": "Human Rights"
+      }
+    ]
+  }
+}
