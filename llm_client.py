@@ -102,11 +102,15 @@ class LLMClient:
             except ImportError:
                 pass
 
-    def invoke(self, prompt: str) -> str:
+    def invoke(self, prompt: str, temperature: Optional[float] = None) -> str:
         """Invoke LLM with retry logic. Returns the content string."""
+        llm = self.llm
+        if temperature is not None and hasattr(llm, "bind"):
+            llm = llm.bind(temperature=temperature)
+
         for attempt in range(1, self.max_retries + 1):
             try:
-                result = self.llm.invoke(prompt).content
+                result = llm.invoke(prompt).content
                 logger.debug("LLM invoke succeeded (attempt %d)", attempt)
                 return str(result)
             except Exception as e:
@@ -171,7 +175,7 @@ class LLMClient:
                 time.sleep(self.retry_delay * attempt)
         raise RuntimeError("Retries exhausted")
 
-    def invoke_json(self, prompt: str) -> Any:
+    def invoke_json(self, prompt: str, temperature: Optional[float] = None) -> Any:
         """Invoke LLM and parse JSON response with error handling.
 
         Strips markdown code fences if present before parsing.
@@ -179,7 +183,7 @@ class LLMClient:
         """
         for attempt in range(1, self.max_retries + 1):
             try:
-                raw = self.invoke(prompt)
+                raw = self.invoke(prompt, temperature=temperature)
                 cleaned = self._strip_code_fences(raw)
                 return json.loads(cleaned)
             except json.JSONDecodeError as e:

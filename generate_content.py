@@ -102,6 +102,9 @@ class GcseAssistant:
         # Load question data and mark schemes from vector store
         self.questions, self.mark_schemes = self._load_from_vectorstore()
 
+        # Load full specification text
+        self.specification_text = self._load_full_specification()
+
         # Load prompt and query templates
         root_dir = os.path.dirname(os.path.abspath(__file__))
         prompts_path = "prompts" if os.path.exists("prompts") else os.path.join(root_dir, "prompts")
@@ -128,6 +131,7 @@ class GcseAssistant:
             queries=self.queries,
             spec_qa_chain=self.spec_qa_chain,
             embedding_model=self.embedding_model,
+            specification_text=self.specification_text,
         )
 
         # Exam marker
@@ -144,6 +148,7 @@ class GcseAssistant:
             subject=subject,
             examiner=examiner,
             embedding_model=self.embedding_model,
+            specification_text=self.specification_text,
         )
 
         # Exam quality analyzer
@@ -317,6 +322,60 @@ class GcseAssistant:
             feedback=feedback,
         )
 
+    def _load_full_specification(self) -> str:
+        """Find the specification PDF, extract text using pypdf if not cached, and return it."""
+        spec_dir = f"data/{self.subject}/{self.examiner}/Specification"
+        if not os.path.exists(spec_dir):
+            root_dir = os.path.dirname(os.path.abspath(__file__))
+            spec_dir = os.path.join(root_dir, "data", self.subject, self.examiner, "Specification")
+            
+        spec_dir = os.path.normpath(spec_dir)
+        if not os.path.exists(spec_dir):
+            logger.warning("Specification directory not found under %s", spec_dir)
+            return "No specification details found."
+            
+        # Find PDF file
+        pdf_file = None
+        for filename in os.listdir(spec_dir):
+            if filename.lower().endswith(".pdf"):
+                pdf_file = os.path.normpath(os.path.join(spec_dir, filename))
+                break
+                
+        if not pdf_file:
+            logger.warning("No specification PDF file found in %s", spec_dir)
+            return "No specification details found."
+            
+        # Check if text cache exists
+        txt_file = os.path.normpath(pdf_file.rsplit(".", 1)[0] + ".txt")
+        if os.path.exists(txt_file):
+            try:
+                with open(txt_file, "r", encoding="utf-8") as f:
+                    logger.info("Loaded specification text from cache: %s", txt_file)
+                    return f.read()
+            except Exception as e:
+                logger.error("Failed to read cached spec text: %s", e)
+                
+        # If cache doesn't exist, extract using pypdf
+        logger.info("Extracting text from specification PDF: %s", pdf_file)
+        try:
+            from pypdf import PdfReader
+            reader = PdfReader(pdf_file)
+            text_parts = []
+            for i, page in enumerate(reader.pages):
+                page_text = page.extract_text()
+                if page_text:
+                    text_parts.append(page_text)
+            full_text = "\n\n".join(text_parts)
+            
+            # Save cache
+            with open(txt_file, "w", encoding="utf-8") as f:
+                f.write(full_text)
+            logger.info("Saved specification text cache to: %s", txt_file)
+            return full_text
+        except Exception as e:
+            logger.error("Failed to extract text from specification PDF %s: %s", pdf_file, e)
+            return "No specification details found."
+
 def format_exam_as_markdown(subject: str, examiner: str, exam_topic: str, exam_data: dict) -> str:
     """Format a generated exam dictionary into a clean, readable markdown document.
     
@@ -368,21 +427,25 @@ def format_exam_as_markdown(subject: str, examiner: str, exam_topic: str, exam_d
                 
                 for sq in q["sub_questions"]:
                     label = sq.get("label", "")
+                    sq_subtopic = sq.get("subtopic", "")
+                    sq_subtopic_str = f" (Subtopic: {sq_subtopic})" if sq_subtopic else ""
                     
                     if "sub_parts" in sq:
                         context = sq.get("context", "")
-                        md.append(f"**{label}** {context}")
+                        md.append(f"**{label}**{sq_subtopic_str} {context}")
                         md.append("")
                         for gq in sq["sub_parts"]:
                             g_label = gq.get("label", "")
                             g_text = gq.get("text", "")
                             g_marks = gq.get("marks", 0)
-                            md.append(f"  * **{g_label}** {g_text} *({g_marks} mark{'s' if g_marks > 1 else ''})*")
+                            g_subtopic = gq.get("subtopic", "")
+                            g_subtopic_str = f" (Subtopic: {g_subtopic})" if g_subtopic else ""
+                            md.append(f"  * **{g_label}** {g_text}{g_subtopic_str} *({g_marks} mark{'s' if g_marks > 1 else ''})*")
                             md.append("")
                     else:
                         sq_text = sq.get("text", "")
                         sq_marks = sq.get("marks", 0)
-                        md.append(f"* **{label}** {sq_text} *({sq_marks} mark{'s' if sq_marks > 1 else ''})*")
+                        md.append(f"* **{label}** {sq_text}{sq_subtopic_str} *({sq_marks} mark{'s' if sq_marks > 1 else ''})*")
                         md.append("")
             else:
                 # Standalone question

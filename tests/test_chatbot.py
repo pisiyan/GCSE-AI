@@ -44,18 +44,18 @@ class TestChatbot(unittest.TestCase):
         mock_followup.assert_not_called()
 
     @patch('chatbot.ChatbotAgent.run_agent_loop_followup')
-    def test_run_agent_loop_query_content(self, mock_followup):
-        # Mock invoke_json to return query_content action
+    def test_run_agent_loop_query_past_papers(self, mock_followup):
+        # Mock invoke_json to return query_past_papers action
         self.mock_assistant.llm_client.invoke_json.return_value = {
             "thought": "Querying for velocity definition",
-            "action": "query_content",
+            "action": "query_past_papers",
             "params": {"query": "velocity definition"},
             "message": "Searching database..."
         }
         self.mock_assistant.llm_client.invoke_qa.return_value = "Velocity is rate of change of displacement."
 
         self.agent.run_agent_loop("what is velocity?")
-        self.mock_assistant.llm_client.invoke_qa.assert_called_with(self.mock_assistant.spec_qa_chain, "velocity definition")
+        self.mock_assistant.llm_client.invoke_qa.assert_called_with(self.mock_assistant.ms_qa_chain, "velocity definition")
         self.assertEqual(self.agent.history[-1]["role"], "system")
         self.assertIn("Velocity is rate of change of displacement.", self.agent.history[-1]["content"])
         mock_followup.assert_called_once()

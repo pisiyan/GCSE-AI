@@ -30,6 +30,14 @@ class SubjectConfig:
     example_descriptions: int = 0
     question_no_importance: bool = False
     
+    # Configurable limits and execution parameters
+    max_structure_retries: int = 50
+    max_parallel_workers: int = 10
+    max_parent_exemplars: int = 3
+    fallback_embedding_dim: int = 384
+    temperature_structure: float = 0.0
+    temperature_generation: float = 0.7
+    
     # Dynamic fields set upon loading
     subject: Optional[str] = None
     examiner: Optional[str] = None

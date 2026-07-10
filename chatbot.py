@@ -131,11 +131,14 @@ class ChatbotAgent:
 
         # 2. Construct Prompt
         system_instruction = f"""You are the GCSE AI Chatbot Assistant for {self.subject} ({self.examiner}).
-Your goal is to help the user study, query syllabus/specification content, mark answers, and generate exams.
+Your goal is to help the user study, answer questions about syllabus/specification content, mark answers, and generate exams.
 
 Current Active Subject: {self.subject} ({self.examiner})
 User Preferences & Custom Constraints:
 {self.get_preferences_text()}
+
+Official GCSE Syllabus/Specification context for {self.subject} ({self.examiner}):
+{self.assistant.specification_text}
 
 You must respond strictly in JSON format matching the schema below.
 If you need to perform an action, specify the action and its arguments in "action" and "params".
@@ -143,12 +146,13 @@ If you need to ask a question, tell the user something, or answer directly, spec
 
 AVAILABLE ACTIONS:
 1. "none":
-   Use this for regular conversation, explaining content, or when you need to ask the user for missing details.
+   Use this for regular conversation, explaining content using the specification context above, or when you need to ask the user for missing details.
    Params: None.
-2. "query_content":
-   Use this when the user asks a question about the syllabus or exam content, and you need to query the vector database (RAG) to retrieve accurate details.
+2. "query_past_papers":
+   Use this when the user asks to search past exam papers, questions, or mark schemes in the database (e.g. to see example questions or mark schemes).
+   Do NOT use this for syllabus content lookups, as you already have the full syllabus specification context above.
    Params:
-     - "query": (str) The specific search/syllabus query.
+     - "query": (str) The past paper search query.
 3. "generate_exam":
    Use this ONLY when the user requests generating a new exam.
    VALIDATION REQUIREMENT: You MUST have all 3 parameters provided: `exam_topic` (e.g. Higher/Foundation), `total_marks` (int), and `topics` (list of strings).
@@ -178,7 +182,7 @@ AVAILABLE ACTIONS:
 RESPONSE SCHEMA:
 {{
   "thought": "Your internal thinking process about what the user wants and parameter validation check.",
-  "action": "none" | "query_content" | "generate_exam" | "mark_answer" | "revision_materials" | "save_preferences",
+  "action": "none" | "query_past_papers" | "generate_exam" | "mark_answer" | "revision_materials" | "save_preferences",
   "params": {{ ... }},
   "message": "Your conversational reply to the user (required if action is 'none', otherwise a brief placeholder)."
 }}
@@ -214,17 +218,17 @@ IMPORTANT:
             Colors.print_green(f"\n{message}")
             self.history.append({"role": "assistant", "content": message})
 
-        elif action == "query_content":
+        elif action == "query_past_papers":
             query = params.get("query", "")
-            Colors.print_blue(f"\n[Syllabus Search] Searching vector database for: '{query}'...")
+            Colors.print_blue(f"\n[Database Search] Searching past papers & mark schemes for: '{query}'...")
             try:
-                rag_result = self.assistant.llm_client.invoke_qa(self.assistant.spec_qa_chain, query)
+                rag_result = self.assistant.llm_client.invoke_qa(self.assistant.ms_qa_chain, query)
                 obs_content = f"Database search results for query '{query}':\n{rag_result}"
                 self.history.append({"role": "system", "content": obs_content})
                 # Call LLM again with the new observation
                 self.run_agent_loop_followup()
             except Exception as e:
-                self.handle_action_error("query_content", e)
+                self.handle_action_error("query_past_papers", e)
 
         elif action == "generate_exam":
             exam_topic = params.get("exam_topic")
@@ -276,21 +280,8 @@ IMPORTANT:
                      f.write(exam_md)
                 Colors.print_green(f"  -> Generated exam saved to: {filename}")
 
-                # Analyze Exam Quality
-                Colors.print_blue("  - Running quality analysis report...")
-                quality_report = self.assistant.analyze_exam(exam_data)
-                quality_md = self.assistant.quality_analyzer.generate_markdown_report(quality_report)
-                
-                filename_quality = f"test_outputs/{self.subject}_{self.examiner}_exam_quality_{timestamp}.md"
-                with open(filename_quality, "w", encoding="utf-8") as f:
-                    f.write(quality_md)
-                Colors.print_green(f"  -> Quality report saved to: {filename_quality}")
-
-                obs_content = (
-                    f"Exam generated successfully and saved to file '{filename}'.\n"
-                    f"Overall quality score is {quality_report.get('overall_score')}/100. "
-                    f"Quality report is saved to '{filename_quality}'."
-                )
+                # Quality analysis bypassed as per user request to speed up generation
+                obs_content = f"Exam generated successfully and saved to file '{filename}'."
                 self.history.append({"role": "system", "content": obs_content})
                 self.run_agent_loop_followup()
             except Exception as e:
@@ -329,9 +320,7 @@ IMPORTANT:
             try:
                 feedback = self.assistant.exam_marker.mark_answer(student_answer, mark_scheme, question, marks)
                 
-                # Feedback Quality Analysis
-                fb_report = self.assistant.analyze_feedback(question, marks, mark_scheme, student_answer, feedback)
-                
+                # Feedback Quality Analysis bypassed as per user request
                 os.makedirs("test_outputs", exist_ok=True)
                 timestamp = int(time.time())
                 filename = f"test_outputs/{self.subject}_{self.examiner}_feedback_{timestamp}.md"
@@ -342,14 +331,13 @@ IMPORTANT:
                         f"**Max Marks:** {marks}\n\n"
                         f"**Student Answer:** {student_answer}\n\n"
                         f"**Mark Scheme:**\n{mark_scheme}\n\n"
-                        f"**Feedback & Grade:**\n{feedback}\n\n"
-                        f"**Feedback Quality Score:** {fb_report.get('overall_score')}/100"
+                        f"**Feedback & Grade:**\n{feedback}\n"
                     )
                 Colors.print_green(f"  -> Marking evaluation saved to: {filename}")
 
                 obs_content = (
                     f"Answer marked. Feedback saved to '{filename}'. "
-                    f"Awarded score detail: {feedback}. Feedback Quality Score: {fb_report.get('overall_score')}/100."
+                    f"Awarded score detail: {feedback}."
                 )
                 self.history.append({"role": "system", "content": obs_content})
                 self.run_agent_loop_followup()

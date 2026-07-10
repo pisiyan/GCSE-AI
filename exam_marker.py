@@ -41,6 +41,7 @@ class ExamMarker:
         subject: str,
         examiner: str,
         embedding_model: Any = None,
+        specification_text: str = "",
     ):
         self.config = config
         self.llm = llm_client
@@ -54,6 +55,7 @@ class ExamMarker:
         self.subject = subject
         self.examiner = examiner
         self.embedding_model = embedding_model
+        self.specification_text = specification_text
 
         # Cache exam types to avoid recomputing
         self._exam_types: Optional[list[str]] = None
@@ -101,10 +103,14 @@ class ExamMarker:
         )
 
         # Get relevant specification info for the question
-        info_query = self.queries["get_question_related_info"].format(
-            question=question
-        )
-        info = self.llm.invoke_qa(self.spec_qa_chain, info_query)
+        if self.specification_text:
+            prompt = f"Using the following GCSE {self.subject} specification context, extract the relevant syllabus requirements and information needed to answer this question: '{question}'\n\nSPECIFICATION CONTENT:\n{self.specification_text}\n\nRelevant Information:"
+            info = self.llm.invoke(prompt)
+        else:
+            info_query = self.queries["get_question_related_info"].format(
+                question=question
+            )
+            info = self.llm.invoke_qa(self.spec_qa_chain, info_query)
         logger.info("Retrieved spec info for mark scheme creation")
         logger.debug("Spec info: %s", info)
 
@@ -190,7 +196,11 @@ class ExamMarker:
         prompt = self.prompts["exam_type_of_question"].format(
             exam_types=self.exam_types, question=question
         )
-        return self.llm.invoke_qa(self.spec_qa_chain, prompt)
+        if self.specification_text:
+            full_prompt = f"Using the following GCSE {self.subject} specification:\n\nSPECIFICATION:\n{self.specification_text}\n\nTask: {prompt}"
+            return self.llm.invoke(full_prompt)
+        else:
+            return self.llm.invoke_qa(self.spec_qa_chain, prompt)
 
     def generate_model_answer(self, question: str, mark_scheme: str) -> str:
         """Generate a model answer for a question.
