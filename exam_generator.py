@@ -643,93 +643,85 @@ Do not return any explanations, return only the JSON block (no ```json markdown 
         self.spec_trees_cache[cache_key] = tree
         return tree
 
-    def generate_question(
-        self,
-        marks: int,
-        exam_topic: str,
-        subtopic: str,
-        subtopic_info: str,
-        question_content: str = "",
-        parent_description: str = "",
-        subject: str = "",
-        examiner: str = ""
-    ) -> str:
-        """Generate a single exam question (basic/standalone) with self-critique/refinement."""
-        example_questions = self.local_similarity.find_least_similar_objects(
-            objects=self.questions,
-            comparison=subtopic,
-            n=self.config.example_questions,
-            topic_value=exam_topic,
-            marks_value=marks,
-        )
+    def _find_most_similar_question(self, query: str, candidate_qs: list[dict]) -> dict:
+        if not candidate_qs:
+            return None
+        if len(candidate_qs) == 1:
+            return candidate_qs[0]
 
-        prompt_extension = ""
-        if question_content:
-            prompt_extension = self.prompts["question_prompt_extention"].format(
-                question_content=question_content,
-                parent_description=parent_description,
-            )
+        texts = []
+        for q in candidate_qs:
+            text = q.get("question_content") or q.get("parent_question_description") or q.get("topic") or ""
+            texts.append(text)
 
-        prompt = self.prompts["make_question"].format(
-            subject=subject or getattr(self.config, "subject", "GCSE") or "GCSE",
-            examiner=examiner or getattr(self.config, "examiner", "") or "",
-            marks=marks,
-            random_questions="\n\n".join(example_questions),
-            topic_info=subtopic_info,
-            subtopic=subtopic,
-        )
+        all_texts = [query] + texts
+        embeddings = self.local_similarity.get_embeddings(all_texts)
         
-        # Append calibration examples to guide mark weight depth
-        prompt += "\n\n" + self._get_mark_calibration_examples()
+        q_emb = np.array(embeddings[0])
+        c_embs = np.array(embeddings[1:])
 
-        if prompt_extension:
-            prompt += "\n" + prompt_extension
+        norms = np.linalg.norm(c_embs, axis=1)
+        q_norm = np.linalg.norm(q_emb)
+        norms = np.where(norms == 0, 1.0, norms)
+        q_norm = 1.0 if q_norm == 0 else q_norm
 
-        temp_gen = getattr(self.config, "temperature_generation", 0.7)
-        temp_struct = getattr(self.config, "temperature_structure", 0.0)
+        similarities = c_embs @ q_emb / (norms * q_norm)
+        best_idx = int(np.argmax(similarities))
+        return candidate_qs[best_idx]
 
-        # 1. Draft the question
-        draft = self.llm.invoke(prompt, temperature=temp_gen)
-
-        # 2. Critique the draft
-        critique_prompt = f"""You are a senior GCSE {subject or 'science'} examiner.
-Critique the drafted question against GCSE standards:
-DRAFT QUESTION:
-{draft}
-
-GCSE standard requirements:
-- The question must be scientifically accurate, clear, and concise.
-- If it involves calculations (e.g., math, equations), it MUST provide realistic numerical values/units and ask the student to show their working.
-- If it involves practical investigations, graphs, data, or experiments, it must focus on interpreting or evaluating that experimental setup.
-- It MUST end with answer lines represented by dotted lines (like '........................................') proportional to the mark allocation (more marks = more lines), unless it is a multiple-choice question.
-- Do NOT include question numbers or the mark value inside the question text.
-
-Output a brief list of critique points or state 'Approved' if the question is perfect.
-Do not write a revised question here, only write the critique feedback."""
-
-        critique = self.llm.invoke(critique_prompt, temperature=temp_struct)
-
-        # If approved, return draft directly
-        if "approved" in critique.strip().lower() and len(critique.strip()) < 20:
-            return draft
-
-        # 3. Refine the question
-        refinement_prompt = f"""You are an expert GCSE {subject or 'science'} question writer.
-Revise the draft question below to address the examiner feedback and ensure it meets all GCSE standards.
-
-DRAFT QUESTION:
-{draft}
-
-EXAMINER FEEDBACK:
-{critique}
-
-Rules:
-- Output ONLY the final revised question text.
-- Do not include explanations, intro text, question numbers, or markdown other than the question content itself.
-- Ensure the question ends with dotted lines for answer space (proportional to {marks} marks)."""
-
-        refined = self.llm.invoke(refinement_prompt, temperature=temp_gen)
-        return refined
+    def _build_copied_sub_questions(self, structure: list, leaf_qs: list[dict], subtopics: list[str]) -> list[dict]:
+        letters = "abcdefghijklmn"
+        romans = ["i", "ii", "iii", "iv", "v", "vi"]
+        
+        parsed = []
+        leaf_iterator = iter(leaf_qs)
+        
+        for idx, item in enumerate(structure):
+            label = f"{letters[idx]})"
+            subtopic_name = subtopics[idx] if idx < len(subtopics) else (subtopics[-1] if subtopics else "")
+            
+            if isinstance(item, list):
+                # Sub-parent: contains grandchild questions
+                roman_list = []
+                for ridx, sub_item in enumerate(item):
+                    r_label = f"{romans[ridx]})"
+                    try:
+                        leaf_q = next(leaf_iterator)
+                        text = (leaf_q.get("question_content") or "").strip()
+                        marks = leaf_q.get("marks", 1)
+                    except StopIteration:
+                        text = ""
+                        marks = sub_item
+                    
+                    roman_list.append({
+                        "label": r_label,
+                        "text": text,
+                        "marks": marks,
+                        "subtopic": subtopic_name
+                    })
+                parsed.append({
+                    "label": label,
+                    "context": "",
+                    "sub_parts": roman_list,
+                    "subtopic": subtopic_name
+                })
+            else:
+                # Simple child question
+                try:
+                    leaf_q = next(leaf_iterator)
+                    text = (leaf_q.get("question_content") or "").strip()
+                    marks = leaf_q.get("marks", 1)
+                except StopIteration:
+                    text = ""
+                    marks = item
+                    
+                parsed.append({
+                    "label": label,
+                    "text": text,
+                    "marks": marks,
+                    "subtopic": subtopic_name
+                })
+        return parsed
 
     def _execute_generation_task(self, task: dict) -> dict:
         """Executes a single question generation task (called in parallel thread)."""
@@ -742,14 +734,28 @@ Rules:
 
         if isinstance(mark_structure, int):
             # Basic standalone question
-            logger.info("Generating standalone question Q%d (%d marks)...", q_num, mark_structure)
-            question_text = self.generate_question(
-                marks=mark_structure,
-                exam_topic=exam_topic,
-                subtopic=subtopic,
-                subtopic_info=subtopic_data["description"],
-                subject=subject
-            )
+            logger.info("Retrieving standalone question Q%d (%d marks) matching subtopic '%s'...", q_num, mark_structure, subtopic)
+            
+            # Filter candidates from past papers
+            # Priority 1: type basic_question and exact marks
+            candidates = [
+                q for q in self.questions 
+                if q.get("type") == "basic_question" and q.get("marks") == mark_structure
+            ]
+            if not candidates:
+                # Priority 2: any question type with the exact marks
+                candidates = [q for q in self.questions if q.get("marks") == mark_structure]
+            if not candidates:
+                # Priority 3: any basic question
+                candidates = [q for q in self.questions if q.get("type") == "basic_question"]
+            if not candidates:
+                # Priority 4: any question
+                candidates = list(self.questions)
+
+            # Find the most semantically similar question
+            q_best = self._find_most_similar_question(subtopic, candidates)
+            question_text = (q_best.get("question_content") or q_best.get("text") or "").strip()
+
             return {
                 "number": f"{q_num})",
                 "text": question_text,
@@ -758,358 +764,60 @@ Rules:
                 "q_num": q_num
             }
 
-        # Parent Question with sub-parts
-        logger.info("Generating parent question Q%d (structure: %s)...", q_num, mark_structure)
-
-        # 1. Collect past parent questions for style exemplars
-        parent_exemplars = [
-            q for q in self.questions
-            if q.get("type") == "parent_question" and q.get("topic") == exam_topic
-        ]
-        if not parent_exemplars:
-            parent_exemplars = [q for q in self.questions if q.get("type") == "parent_question"]
-
-        # Group flat past questions by parent description to reconstruct complete multi-part questions
-        parent_groups = {}
-        for q in self.questions:
-            desc = q.get("parent_question_description") or q.get("parent_context")
-            if desc:
-                parent_groups.setdefault(desc, []).append(q)
-
-        exemplar_texts = []
-        if parent_groups:
-            # Find parent descriptions matching semantic context
-            descs = list(parent_groups.keys())
-            comp_string = task["topic"]  # use broad topic name for best contextual matches
-            max_exemplars = getattr(self.config, "max_parent_exemplars", 3)
+        else:
+            # Parent question with sub-parts
+            logger.info("Retrieving parent question Q%d (structure: %s) matching subtopics '%s'...", q_num, mark_structure, subtopic)
             
-            # Make a pool of the top max_parent_exemplars * 2 most similar questions to the broad topic
-            pool_size = max_exemplars * 2
-            candidate_pool = []
-            temp_descs = descs.copy()
-            for _ in range(min(pool_size, len(temp_descs))):
-                matched = self.local_similarity.find_most_similar(comp_string, temp_descs)
-                candidate_pool.append(matched)
-                if matched in temp_descs:
-                    temp_descs.remove(matched)
+            # Filter candidates from past papers
+            # Priority 1: type parent_question and exact parent_question_structure match
+            candidates = [
+                q for q in self.questions 
+                if q.get("type") == "parent_question" and q.get("parent_question_structure") == mark_structure
+            ]
+            if not candidates:
+                # Priority 2: type parent_question and same flattened marks
+                flattened_marks = ExamStructureBuilder.flatten_marks(mark_structure)
+                candidates = [
+                    q for q in self.questions 
+                    if q.get("type") == "parent_question" and ExamStructureBuilder.flatten_marks(q.get("parent_question_structure")) == flattened_marks
+                ]
+            if not candidates:
+                # Priority 3: any parent question
+                candidates = [q for q in self.questions if q.get("type") == "parent_question"]
+            if not candidates:
+                # Priority 4: any question
+                candidates = list(self.questions)
+
+            # Find the most semantically similar question using the subtopics summary
+            q_best = self._find_most_similar_question(subtopic, candidates)
             
-            # From within the candidate pool, pick max_exemplars that are least similar to each other
-            matched_descs = self.local_similarity.pick_diverse_subset(candidate_pool, min(max_exemplars, len(candidate_pool)))
+            # Retrieve all child and grandchild questions for the chosen parent question
+            p_desc = q_best.get("parent_question_description")
+            p_exam = q_best.get("exam")
+            related = [
+                q for q in self.questions
+                if q.get("parent_question_description") == p_desc and q.get("exam") == p_exam
+            ]
+            leaf_qs = [
+                q for q in related 
+                if q.get("type") in ("child_question", "grandchild_question")
+            ]
+            
+            # Reconstruct sub_questions matching the exact parent question structure
+            top_level_subtopics = task.get("subtopics", [subtopic])
+            sub_questions = self._build_copied_sub_questions(
+                q_best.get("parent_question_structure") or mark_structure, 
+                leaf_qs, 
+                top_level_subtopics
+            )
 
-            for desc in matched_descs:
-                group = parent_groups[desc]
-                group_text = f"Parent Context:\n{desc}\nSub-questions:\n"
-                for sq in group:
-                    marks = sq.get("marks", 1)
-                    q_text = sq.get("question_content", "") or sq.get("text", "")
-                    group_text += f"- ({marks} marks): {q_text}\n"
-                exemplar_texts.append(group_text)
-
-        exemplars_joined = "\n\n---\n\n".join(exemplar_texts) if exemplar_texts else "No exam exemplars available."
-
-        # 2. Assign distinct specification subtopics and sub-subtopics to each leaf question part to prevent redundancies
-        top_level_subtopics = task["subtopics"]
-        top_level_subtopics_data = task["subtopics_data"]
-
-        shuffled_ssts = []
-        for sst_data in top_level_subtopics_data:
-            sst_list = sst_data.get("sub_subtopics", []).copy()
-            random.shuffle(sst_list)
-            shuffled_ssts.append(sst_list)
-
-        def assign_recursively(structure, letters="abcdefghijklmn", romans=["i", "ii", "iii", "iv", "v"], depth=0, parent_label="", top_idx=0, sst_indices=None):
-            if sst_indices is None:
-                sst_indices = [0] * len(top_level_subtopics)
-            res = []
-            for idx, item in enumerate(structure):
-                if depth == 0:
-                    label = f"{letters[idx]})"
-                    part_name = f"Part {label}"
-                    current_top_idx = idx
-                else:
-                    label = f"{romans[idx]})"
-                    part_name = f"Sub-part {parent_label} {label}"
-                    current_top_idx = top_idx
-
-                subtopic_name = top_level_subtopics[current_top_idx]
-                subtopic_info = top_level_subtopics_data[current_top_idx]["description"]
-                shuffled_sst = shuffled_ssts[current_top_idx]
-
-                if isinstance(item, list):
-                    # Pass the current top_idx down to grandchild parts
-                    sub_res = assign_recursively(item, letters, romans, depth + 1, label, current_top_idx, sst_indices)
-                    res.append({
-                        "label": label,
-                        "type": "sub_parent",
-                        "subtopic": subtopic_name,
-                        "subtopic_info": subtopic_info,
-                        "context_desc": f"Context for {part_name} sub-parts...",
-                        "sub_parts": sub_res
-                    })
-                else:
-                    if shuffled_sst:
-                        sst_idx = sst_indices[current_top_idx]
-                        sst = shuffled_sst[sst_idx % len(shuffled_sst)]
-                        sst_indices[current_top_idx] += 1
-                        concept_desc = f"Concept: {sst.get('name')} (Requirements: {sst.get('description')})"
-                    else:
-                        concept_desc = f"Concept: General details of {subtopic_name}"
-
-                    res.append({
-                        "label": label,
-                        "type": "basic",
-                        "marks": item,
-                        "subtopic": subtopic_name,
-                        "subtopic_info": subtopic_info,
-                        "concept": concept_desc
-                    })
-            return res
-
-        sst_indices = [0] * len(top_level_subtopics)
-        assigned_structure = assign_recursively(mark_structure, sst_indices=sst_indices)
-
-        # 3. Format the assigned target structure text block for the LLM prompt
-        def format_assigned_text(structure, indent=""):
-            lines = []
-            for item in structure:
-                label = item["label"]
-                if item["type"] == "sub_parent":
-                    lines.append(f"{indent}- Part {label}: Sub-parent context section containing Roman numeral sub-parts (Subtopic: {item['subtopic']}).")
-                    lines.extend(format_assigned_text(item["sub_parts"], indent + "  "))
-                else:
-                    lines.append(f"{indent}- Part {label} ({item['marks']} marks): MUST test exactly the following {item['concept']} (from Subtopic: {item['subtopic']}).")
-            return lines
-
-        parts_text = "\n".join(format_assigned_text(assigned_structure))
-
-        # Compile subtopics details list
-        subtopics_details_list = []
-        for s_name, s_data in zip(top_level_subtopics, top_level_subtopics_data):
-            subtopics_details_list.append(f"- Subtopic: {s_name}\n  Details: {s_data['description']}")
-        subtopics_details_text = "\n".join(subtopics_details_list)
-
-        prompt = f"""You are an expert GCSE {subject} question writer.
-Write a multi-part exam question.
-
-Main Topic: {task['topic']}
-Subtopics Covered:
-{subtopics_details_text}
-
-Here is the exact target question parts structure to generate, along with the distinct concept assigned to each part:
-{parts_text}
-
-Here are past paper exam exemplars showing the tone, style, and structure to replicate:
-{exemplars_joined}
-
-{self._get_mark_calibration_examples()}
-
-Parent Description Guidelines:
-1. The parent description MUST NOT be a basic textbook definition or general summary of the topic.
-2. It should setup a realistic scenario: for example, a specific case study, a practical/experimental setup (e.g. "A student investigated..."), a graph description, a data table, or a diagram.
-3. Crucial: If the parent description describes a practical investigation or experiment where students collected data (or if any sub-question asks to calculate values, rates, or percentages from an experiment):
-   - You MUST include a formatted markdown data table presenting this collected data.
-   - The table columns, labels, and units must follow standard subject/exam board conventions (e.g. columns for independent and dependent variables, with units in headers like 'Temperature / °C' or 'Time / s').
-   - Provide realistic, concrete values.
-   - Any subsequent calculation parts must refer to this table and use its values.
-4. If the scenario involves a graph or diagram, describe its key values, labels, or trends clearly in text so subsequent sub-questions can refer to it logically.
-5. Make the language active, authentic, and scientific, matching real GCSE past papers.
-
-Question Generation Rules:
-1. Replicate the formatting and scientific tone of the exemplars, but do NOT copy their content.
-2. For each question, end with answer lines represented by dotted lines (like '........................................') matching the mark allocation (more marks = more lines).
-3. For multiple-choice questions (1 mark parts), provide A, B, C, D options and do not include dotted lines.
-4. Ensure parts testing the same scenario are coherent, but test exactly the assigned distinct concept to avoid duplicate testing and redundancy.
-5. If an assigned concept or subtopic description mentions calculations, math, formulas, equations, rates, percentages, or mathematical operations:
-   - The question part MUST be a calculation question.
-   - Provide concrete, realistic numerical values and units.
-   - Instruct the student to show their working (e.g., "State the formula used and show your working.").
-6. Data Presentation & Calculation Link in Practicals: If the scenario involves a practical investigation, experiment, or core practical where data was collected (or if subsequent parts require calculations using experimental data):
-   - You MUST present all experimental data in a structured markdown data table in the `parent_description` or the sub-question `context`.
-   - The table columns, labels, and units must follow standard subject/exam board conventions (e.g., `Time / s`, `Temperature / °C`, `Volume / cm³`).
-   - Any calculation question parts MUST reference this table and be mathematically solvable using the specific values provided in it.
-7. Context Formatting & Part a) direct start:
-   - The first sub-question (part a)) MUST ask a question directly after the main `parent_description` without introducing any extra context or introductory paragraph. Do not write a context paragraph for part a) (keep `"context"` empty or very short).
-   - Extra context/scenario descriptions (e.g. `"context"` in the JSON schema) are only allowed when introducing subsequent parts like b) or c) if a new detail, table, or variable is introduced.
-8. Return the result strictly as a JSON object matching this schema:
-{{
-  "parent_description": "intro context scenario setup (case study, experiment, graph/table description). DO NOT include question numbers here.",
-  "sub_questions": [
-    {{
-      "label": "a)",
-      "type": "basic",
-      "text": "Question text for part a) including the dotted lines",
-      "marks": 3,
-      "subtopic": "Exact Name of the Subtopic being tested"
-    }},
-    {{
-      "label": "b)",
-      "type": "sub_parent",
-      "context": "Context paragraph for parts i, ii, iii (if needed, otherwise leave empty)",
-      "sub_parts": [
-        {{
-          "label": "i)",
-          "text": "Question text for part i) here...",
-          "marks": 1,
-          "subtopic": "Exact Name of the Subtopic being tested"
-        }}
-      ]
-    }}
-  ]
-}}
-Do not return any explanations, markdown code blocks other than ```json, or other text. Output only raw JSON.
-"""
-
-        temp_gen = getattr(self.config, "temperature_generation", 0.7)
-        temp_struct = getattr(self.config, "temperature_structure", 0.0)
-
-        # 1. Draft the parent question JSON
-        try:
-            res_json = self.llm.invoke_json(prompt, temperature=temp_gen)
-        except Exception as e:
-            logger.error("JSON generation failed for Q%d: %s. Retrying with basic prompts.", q_num, e)
-            res_json = {
-                "parent_description": f"Figure shows details about {subtopic}.",
-                "sub_questions": [{"label": "a)", "type": "basic", "text": f"Describe {subtopic}.", "marks": 3}]
+            return {
+                "number": f"{q_num})",
+                "parent_description": q_best.get("parent_question_description", "").strip(),
+                "sub_questions": sub_questions,
+                "subtopic": subtopic,
+                "q_num": q_num
             }
-
-        # 2. Critique the draft JSON
-        critique_prompt = f"""You are a senior GCSE {subject or 'science'} examiner.
-Critique this drafted multi-part GCSE question for quality, scientific accuracy, and originality:
-
-DRAFT QUESTION JSON:
-{json.dumps(res_json, indent=2)}
-
-Assigned subtopics/concepts to verify:
-{parts_text}
-
-Verify these GCSE requirements:
-1. Structure Adherence: The generated sub-question labels (a, b, etc. and their sub-parts i, ii, etc.) and their mark allocations MUST MATCH the requested formatting requirements EXACTLY. Omit no parts and do not merge parts or change their marks.
-2. Originality: The "parent_description" MUST NOT copy past papers or textbooks. It should present a unique, realistic scenario, such as a student's experimental setup, a graph, or data. (Sub-questions themselves can be standard similar questions, but the setup/scenario must be unique).
-3. Scientific Accuracy: Are the values, facts, and scientific terminology correct?
-4. Concept Adherence: Do the sub-questions match their assigned concept requirements (e.g. calculation parts must be calculation questions with numbers and units; practical parts must ask for data interpretation/evaluation)?
-5. Formatting: Do basic question texts end with dotted lines matching the mark allocation (more marks = more lines), and multiple choice questions have A, B, C, D choices without dotted lines?
-6. Data Presentation & Solvability: If this is an experimental/practical question, is the data presented as a formatted markdown table with columns and units? Are calculation parts solvable using values from this table?
-7. Direct Start for Part a): Does the first sub-question (part a) or its sub-parts) ask a question directly after the main parent_description without any separate context/introductory paragraph? (Part a's `"context"` should be empty/omitted).
-
-Output a list of improvements or state 'Approved' if the question is perfect.
-Do not output a revised question here, only write the critique feedback."""
-
-        try:
-            critique = self.llm.invoke(critique_prompt, temperature=temp_struct)
-            
-            # If not approved, refine the JSON
-            if not ("approved" in critique.strip().lower() and len(critique.strip()) < 20):
-                refinement_prompt = f"""You are an expert GCSE {subject or 'science'} question writer.
-Revise the draft question JSON to address the examiner feedback and ensure it meets all GCSE standards.
-
-DRAFT QUESTION JSON:
-{json.dumps(res_json, indent=2)}
-
-EXAMINER FEEDBACK:
-{critique}
-
-Original formatting requirements:
-{parts_text}
-
-Output ONLY a valid JSON object matching this schema:
-{{
-  "parent_description": "intro context scenario setup (case study, experiment, graph/table description). DO NOT include question numbers here.",
-  "sub_questions": [
-    {{
-      "label": "a)",
-      "type": "basic",
-      "text": "Question text for part a) including the dotted lines",
-      "marks": 3,
-      "subtopic": "Exact Name of the Subtopic being tested"
-    }},
-    {{
-      "label": "b)",
-      "type": "sub_parent",
-      "context": "Context paragraph for parts i, ii, iii (if needed, otherwise leave empty)",
-      "sub_parts": [
-        {{
-          "label": "i)",
-          "text": "Question text for part i) here...",
-          "marks": 1,
-          "subtopic": "Exact Name of the Subtopic being tested"
-        }}
-      ]
-    }}
-  ]
-}}
-Do not return any explanations, markdown code blocks other than ```json, or other text. Output only raw JSON."""
-
-                refined_json = self.llm.invoke_json(refinement_prompt, temperature=temp_gen)
-                res_json = refined_json
-        except Exception as e:
-            logger.warning("Self-critique or refinement failed for Q%d: %s. Using original draft.", q_num, e)
-
-        # 4. Clean and format the JSON response to exactly match the expected schema
-        sub_questions = self._parse_llm_json_to_exam_structure(res_json, assigned_structure)
-
-        return {
-            "number": f"{q_num})",
-            "parent_description": res_json.get("parent_description", ""),
-            "sub_questions": sub_questions,
-            "subtopic": subtopic,
-            "q_num": q_num
-        }
-
-    def _parse_llm_json_to_exam_structure(self, res_json: dict, assigned_structure: list, letters: str = "abcdefghijklmn", romans: list = None) -> list[dict]:
-        """Convert LLM JSON output to the format expected by GcseAssistant / ExamQualityAnalyzer, appending assigned subtopics."""
-        if romans is None:
-            romans = ["i", "ii", "iii", "iv", "v", "vi"]
-        
-        parsed = []
-        for idx, sq in enumerate(res_json.get("sub_questions", [])):
-            label = f"{letters[idx]})"
-            
-            # Get subtopic from JSON, fallback to assigned_structure
-            subtopic = sq.get("subtopic")
-            assigned_item = None
-            if not subtopic:
-                assigned_item = next((item for item in assigned_structure if item["label"] == label), None) if assigned_structure else None
-                subtopic = assigned_item["subtopic"] if assigned_item else ""
-            
-            # Check if it has grandchild sub-parts
-            sub_parts = sq.get("sub_parts")
-            if sub_parts or sq.get("type") == "sub_parent":
-                roman_list = []
-                for ridx, rq in enumerate(sub_parts or []):
-                    r_label = f"{romans[ridx]})"
-                    
-                    # Find corresponding grandchild subtopic
-                    gc_subtopic = rq.get("subtopic")
-                    if not gc_subtopic:
-                        gc_subtopic = subtopic
-                        # Fallback to assigned structure if needed
-                        if not assigned_item and assigned_structure:
-                            assigned_item = next((item for item in assigned_structure if item["label"] == label), None)
-                        if assigned_item and "sub_parts" in assigned_item:
-                            gc_item = next((item for item in assigned_item["sub_parts"] if item["label"] == r_label), None)
-                            if gc_item:
-                                gc_subtopic = gc_item["subtopic"]
-                    
-                    roman_list.append({
-                        "label": r_label,
-                        "text": rq.get("text", "") or rq.get("question", ""),
-                        "marks": rq.get("marks", 1),
-                        "subtopic": gc_subtopic
-                    })
-                parsed.append({
-                    "label": label,
-                    "context": sq.get("context", "") or sq.get("parent_description", "") or "",
-                    "sub_parts": roman_list,
-                    "subtopic": subtopic
-                })
-            else:
-                parsed.append({
-                    "label": label,
-                    "text": sq.get("text", "") or sq.get("question", ""),
-                    "marks": sq.get("marks", 1),
-                    "subtopic": subtopic
-                })
-        return parsed
 
     def generate_exam(
         self,

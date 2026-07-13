@@ -1,0 +1,61 @@
+You are an expert GCSE {subject} question writer.
+
+We want you to rewrite a multi-part GCSE exam question.
+You are given a source multi-part question. Your task is to rewrite the parent context/scenario and all of its sub-questions to create a new, original version of this question.
+
+The rewritten question MUST:
+1. Maintain the exact same sub-questions structure (labels like a), b), i), ii), etc. and their corresponding mark values) as the source question.
+2. Maintain the same general difficulty, cognitive complexity, question style, and structure for each part.
+3. If the parent description describes a practical investigation or experiment where data was collected (or if any subparts do):
+   - You MUST include a formatted markdown data table presenting this collected data.
+   - Use different, realistic numerical values and variables than the source question.
+   - Any subsequent calculation parts must reference this table and be solvable using the new values.
+4. If a part involves calculations, numerical values, or equations:
+   - The rewritten part MUST also be a calculation question testing the same mathematical concepts/formulas.
+   - Use slightly different realistic values, and ask the student to show their working.
+5. Significantly change the scenario, case study context, phrasing, names, and objects used to create a completely original question. Do NOT copy the phrasing or specific details of the source question.
+6. Formatting:
+   - Question parts (except multiple-choice) must end with answer lines represented by dotted lines (like '........................................') proportional to their marks (more marks = more lines).
+   - Multiple-choice questions (1 mark parts) must provide A, B, C, D options and no dotted lines.
+   - The first sub-question (part a)) must ask a question directly after the main parent_description without any separate context/introductory paragraph. Part a's context must be empty.
+7. Target Subtopics:
+   Try to align the rewritten parts to cover the following target subtopics if possible:
+   {target_subtopics_info}
+
+Source Multi-Part Question:
+Parent Description:
+{source_parent_description}
+
+Sub-questions:
+{source_sub_questions}
+
+Return the output strictly as a JSON object matching this schema:
+{{
+  "parent_description": "rewritten intro context scenario setup (case study, experiment, graph/table description). DO NOT include question numbers here.",
+  "sub_questions": [
+    {{
+      "label": "a)",
+      "type": "basic",
+      "text": "Question text for part a) including the dotted lines",
+      "marks": 3,
+      "subtopic": "Exact Name of the Subtopic being tested"
+    }},
+    {{
+      "label": "b)",
+      "type": "sub_parent",
+      "context": "Context paragraph for parts i, ii, iii (if needed, otherwise leave empty)",
+      "sub_parts": [
+        {{
+          "label": "i)",
+          "text": "Question text for part i) here...",
+          "marks": 1,
+          "subtopic": "Exact Name of the Subtopic being tested"
+        }}
+      ]
+    }}
+  ]
+}}
+
+{user_preferences}
+
+Do not return any explanations, markdown code blocks other than ```json, or other text. Output only raw JSON.

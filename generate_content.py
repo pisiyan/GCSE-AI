@@ -19,8 +19,6 @@ from llm_client import LLMClient
 from similarity import SimilarityEngine
 from exam_generator import ExamStructureBuilder, QuestionGenerator
 from exam_marker import ExamMarker
-from exam_quality_analyzer import ExamQualityAnalyzer
-from feedback_quality_analyzer import FeedbackQualityAnalyzer
 
 
 # Load environment variables relative to the script directory
@@ -151,12 +149,6 @@ class GcseAssistant:
             specification_text=self.specification_text,
         )
 
-        # Exam quality analyzer
-        self.quality_analyzer = ExamQualityAnalyzer(self)
-
-        # Feedback quality analyzer
-        self.feedback_analyzer = FeedbackQualityAnalyzer(self)
-
         logger.info("Initialization complete")
 
     def _load_from_vectorstore(self) -> tuple[list[dict], list[dict]]:
@@ -283,44 +275,7 @@ class GcseAssistant:
             spec_qa_chain=self.spec_qa_chain,
         )
 
-    def analyze_exam(self, generated_exam: dict) -> dict:
-        """Analyze the quality of a generated exam compared to past papers.
 
-        Args:
-            generated_exam: Dict with exam structure and generated questions.
-
-        Returns:
-            Dict containing the quality analysis report.
-        """
-        return self.quality_analyzer.analyze_exam_quality(generated_exam)
-
-    def analyze_feedback(
-        self,
-        question: str,
-        marks: int,
-        mark_scheme: str,
-        answer: str,
-        feedback: str,
-    ) -> dict:
-        """Analyze the quality of marking feedback given to a student answer.
-
-        Args:
-            question: The question text.
-            marks: Total marks allocated.
-            mark_scheme: The mark scheme content.
-            answer: The student's answer.
-            feedback: The marking feedback text.
-
-        Returns:
-            Dict containing the feedback quality report.
-        """
-        return self.feedback_analyzer.analyze_feedback(
-            question=question,
-            marks=marks,
-            mark_scheme=mark_scheme,
-            answer=answer,
-            feedback=feedback,
-        )
 
     def _load_full_specification(self) -> str:
         """Find the specification PDF, extract text using pypdf if not cached, and return it."""
@@ -546,26 +501,7 @@ if __name__ == "__main__":
         )
         print(f"Generated Feedback:\n{feedback_str}\n")
 
-        print("Analyzing feedback quality...")
-        feedback_report = assistant_bio.analyze_feedback(
-            question=question_text,
-            marks=marks,
-            mark_scheme=mark_scheme_text,
-            answer=answer_text,
-            feedback=feedback_str
-        )
 
-        report_filename = "feedback_quality_report.md"
-        assistant_bio.feedback_analyzer.save_report(
-            filepath=report_filename,
-            question=question_text,
-            marks=marks,
-            mark_scheme=mark_scheme_text,
-            answer=answer_text,
-            feedback=feedback_str,
-            report=feedback_report
-        )
-        print(f"[SUCCESS] Saved feedback evaluation report to: {report_filename}")
     else:
         print("[WARNING] Sample files in user_data/ not found. Skipping feedback quality evaluation.")
 

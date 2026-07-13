@@ -178,29 +178,7 @@ def run_test_for_subject(subject_key: str, config: dict) -> dict:
         f.write(exam_md)
     logger.info("Saved exam markdown to %s", exam_md_path)
 
-    # ── Step 3: Exam quality analysis ─────────────────────────
-    logger.info("=" * 60)
-    logger.info("RUNNING EXAM QUALITY ANALYSIS FOR %s", subject_key)
-    logger.info("=" * 60)
-    t0 = time.time()
-    quality_report = assistant.analyze_exam(exam_data)
-    summary["quality_analysis_time_s"] = round(time.time() - t0, 1)
-    summary["exam_quality_score"] = quality_report["overall_score"]
-    summary["exam_quality_metrics"] = quality_report["metrics"]
-    logger.info("Exam quality analysis took %.1fs", summary["quality_analysis_time_s"])
-    logger.info("EXAM QUALITY SCORE: %.1f/100", quality_report["overall_score"])
 
-    # Save quality report as JSON
-    quality_json_path = os.path.join(OUTPUT_DIR, f"{subject_key}_quality_report.json")
-    with open(quality_json_path, "w", encoding="utf-8") as f:
-        json.dump(quality_report, f, indent=2, ensure_ascii=False)
-
-    # Save quality report as markdown
-    quality_md = assistant.quality_analyzer.generate_markdown_report(quality_report)
-    quality_md_path = os.path.join(OUTPUT_DIR, f"{subject_key}_quality_report.md")
-    with open(quality_md_path, "w", encoding="utf-8") as f:
-        f.write(quality_md)
-    logger.info("Saved quality report to %s", quality_md_path)
 
     # ── Step 4: Generate imperfect answers & mark ─────────────
     logger.info("=" * 60)
@@ -260,15 +238,6 @@ def run_test_for_subject(subject_key: str, config: dict) -> dict:
             # Mark the answer using the actual mark scheme
             feedback = assistant.exam_marker.mark_answer(answer, actual_ms, full_question, marks)
 
-            # Run feedback quality analysis on this answer
-            fb_report = assistant.analyze_feedback(
-                question=full_question,
-                marks=marks,
-                mark_scheme=actual_ms,
-                answer=answer,
-                feedback=feedback,
-            )
-
             answer_results.append({
                 "question_index": i + 1,
                 "question": q_text[:200],
@@ -276,14 +245,7 @@ def run_test_for_subject(subject_key: str, config: dict) -> dict:
                 "answer": answer[:500],
                 "mark_scheme": actual_ms[:500],
                 "feedback": feedback[:500],
-                "feedback_quality_score": fb_report["overall_score"],
-                "feedback_quality_metrics": fb_report["metrics"],
             })
-
-            logger.info(
-                "  → Feedback quality: %.1f/100",
-                fb_report["overall_score"],
-            )
 
         except Exception as e:
             logger.error("Failed to generate/mark answer for Q%d: %s", i + 1, e, exc_info=True)
@@ -297,45 +259,14 @@ def run_test_for_subject(subject_key: str, config: dict) -> dict:
     summary["answer_generation_time_s"] = round(time.time() - t0, 1)
     logger.info("Answer generation and marking took %.1fs", summary["answer_generation_time_s"])
 
-    # Compute average feedback quality
-    fb_scores = [r["feedback_quality_score"] for r in answer_results if "feedback_quality_score" in r]
-    summary["avg_feedback_quality_score"] = round(sum(fb_scores) / len(fb_scores), 1) if fb_scores else None
-    summary["num_questions_answered"] = len(fb_scores)
-    summary["num_questions_failed"] = len(answer_results) - len(fb_scores)
+    summary["num_questions_answered"] = len([r for r in answer_results if "error" not in r])
+    summary["num_questions_failed"] = len(answer_results) - summary["num_questions_answered"]
 
     # Save answer results
     answers_json_path = os.path.join(OUTPUT_DIR, f"{subject_key}_answers.json")
     with open(answers_json_path, "w", encoding="utf-8") as f:
         json.dump(answer_results, f, indent=2, ensure_ascii=False)
     logger.info("Saved answer results to %s", answers_json_path)
-
-    # Save a combined feedback quality report as markdown
-    fb_md_lines = [
-        f"# {subject_key} — Feedback Quality Report\n",
-        f"**Average Feedback Quality Score:** {summary['avg_feedback_quality_score']}/100\n",
-        f"**Questions Answered:** {summary['num_questions_answered']}\n",
-        f"**Questions Failed:** {summary['num_questions_failed']}\n",
-        "",
-        "## Per-Question Results\n",
-        "| # | Marks | Feedback Quality | Question (truncated) |",
-        "| :--- | :--- | :--- | :--- |",
-    ]
-    for r in answer_results:
-        if "feedback_quality_score" in r:
-            q_short = r["question"][:80].replace("|", "\\|").replace("\n", " ")
-            fb_md_lines.append(
-                f"| {r['question_index']} | {r['marks']} | {r['feedback_quality_score']}/100 | {q_short} |"
-            )
-        else:
-            fb_md_lines.append(
-                f"| {r['question_index']} | {r['marks']} | ERROR | {r.get('error', '')[:60]} |"
-            )
-    fb_md_lines.append("")
-
-    fb_md_path = os.path.join(OUTPUT_DIR, f"{subject_key}_feedback_report.md")
-    with open(fb_md_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(fb_md_lines))
-    logger.info("Saved feedback quality report to %s", fb_md_path)
 
     return summary
 
@@ -383,22 +314,14 @@ def main():
                 f"  Topics:                  {', '.join(res['topics_requested'])}",
                 f"  Init Time:               {res['init_time_s']}s",
                 f"  Exam Generation Time:    {res['exam_generation_time_s']}s",
-                f"  Quality Analysis Time:   {res['quality_analysis_time_s']}s",
                 f"  Answer Gen+Mark Time:    {res['answer_generation_time_s']}s",
                 f"  Total Time:              {res['total_time_s']}s",
                 f"  ──────────────────────────────────────────",
-                f"  ★ EXAM QUALITY SCORE:        {res['exam_quality_score']}/100",
-                f"  ★ AVG FEEDBACK QUALITY:       {res['avg_feedback_quality_score']}/100",
                 f"  ★ QUESTIONS ANSWERED:         {res['num_questions_answered']}",
                 f"  ★ QUESTIONS FAILED:           {res['num_questions_failed']}",
             ]
             for line in lines:
                 print(line)
-
-            # Metrics breakdown
-            print(f"  ── Exam Quality Metrics ──")
-            for metric, score in res["exam_quality_metrics"].items():
-                print(f"    {metric}: {score}/100")
 
             # Markdown summary
             summary_md_lines.append(f"| Metric | Value |")
@@ -406,14 +329,9 @@ def main():
             summary_md_lines.append(f"| Exam Topic | {res['exam_topic']} |")
             summary_md_lines.append(f"| Total Marks | {res['total_marks']} |")
             summary_md_lines.append(f"| Topics | {', '.join(res['topics_requested'])} |")
-            summary_md_lines.append(f"| **Exam Quality Score** | **{res['exam_quality_score']}/100** |")
-            summary_md_lines.append(f"| **Avg Feedback Quality** | **{res['avg_feedback_quality_score']}/100** |")
             summary_md_lines.append(f"| Questions Answered | {res['num_questions_answered']} |")
             summary_md_lines.append(f"| Questions Failed | {res['num_questions_failed']} |")
             summary_md_lines.append(f"| Total Time | {res['total_time_s']}s |")
-            summary_md_lines.append("")
-            for metric, score in res["exam_quality_metrics"].items():
-                summary_md_lines.append(f"| {metric} | {score}/100 |")
             summary_md_lines.append("")
 
     # Save combined summary

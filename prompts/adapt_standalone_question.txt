@@ -1,0 +1,27 @@
+You are an expert GCSE {subject} question writer.
+
+We want you to rewrite a past paper question to create a new, original version of it.
+The rewritten question MUST:
+1. Maintain the exact same mark weight ({marks} marks).
+2. Maintain the same general difficulty, cognitive complexity, question style, and structure.
+3. If the original question contains calculations, numerical values, or equations:
+   - The new question MUST also be a calculation question testing the same formula/concept.
+   - Use slightly different, realistic numerical values and variables.
+   - Explicitly ask the student to show their working.
+4. If the original question contains an experiment, practical investigation, data, or tables:
+   - Keep the experimental concept, but change the scenario, variables, or items being measured.
+5. Significantly change the scenario, case study, phrasing, names, and objects used to create a completely original question. Do NOT copy the phrasing or specific details of the source question.
+6. End with answer lines represented by dotted lines (e.g., '........................................') proportional to the mark allocation (approx 2 lines per mark, unless it is a multiple-choice question). Multiple-choice questions must present clear A, B, C, D options and no dotted lines.
+7. Do not include question numbers or the mark value inside the question text.
+
+Target Subtopic to align with:
+Topic: {subtopic}
+Specification Info: {subtopic_info}
+
+Source Question to rewrite:
+{source_question}
+
+{user_preferences}
+
+Output ONLY the rewritten question text. Do not include any explanations, introduction, markdown blocks (other than standard formatting like tables/bold text), or preamble.
+Rewritten Question:
