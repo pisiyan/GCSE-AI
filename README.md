@@ -1,40 +1,133 @@
 # GCSE-AI
 
+> **An AI-powered Retrieval-Augmented Generation (RAG) framework designed for the automated synthesis, structural layout, and marking of UK GCSE examination materials.**
+
+---
+
 ## Overview
 
-**GCSE-AI** is a specialised **Retrieval-Augmented Generation (RAG)** framework designed to automate the creation and assessment of **GCSE examination materials**. 
+**GCSE-AI** is a specialized framework that automates the creation and grading of UK GCSE examination papers and mark schemes. By processing official curriculum specifications and historical past papers from major exam boards (e.g., **Edexcel**, **AQA**), the system ensures generated content strictly adheres to curriculum standards, topic weightings, mark allocations, and authentic exam paper formatting.
 
-The system processes official curriculum specifications and historical mark schemes to ensure that generated content aligns with specific exam board requirements.
+The core platform utilizes **semantic vector search** to map requested topics to official syllabus specifications, while structural layout engines replicate authentic exam paper hierarchies (lead-in descriptions, multi-part sub-questions, and mark distributions). Furthermore, GCSE-AI includes automated marking pipelines capable of evaluating handwritten student answers using Vision OCR LLMs.
 
-The core logic uses **semantic search** to map user requested topics to official specification points. By analysing the structural patterns of past papers - such as the distribution of marks and the hierarchy of sub-questions - the system can generate new exam papers that mirror the **complexity and format** of authentic assessments.
+---
 
-## Technical Structure
-The project is divided into three primary functional areas:
+## Key Features
 
-### 1. Data Ingestion and Processing (load_and_store.py)
-This module handles the transformation of PDF documents into searchable data structures.
+- **Specification-Grounded RAG Engine**: Uses local FAISS vector databases and embeddings to map questions directly to official syllabus points, eliminating hallucinations and ensuring syllabus alignment.
+- **Structural Exam Synthesis**: Replicates authentic exam paper layouts including parent questions, sub-questions (e.g., `(a)`, `(i)`), mark distributions, and lead-in scenario descriptions.
+- **Automatic Mark Scheme Generation**: Synthesizes detailed, point-by-point mark schemes matching official marking criteria when original mark schemes are unavailable.
+- **Automated OCR & Student Response Grading**: Processes images of handwritten student answers using vision-capable LLMs, evaluating work against official or generated mark schemes to award marks and provide model answers.
+- **Subject & Exam Board Configurable**: Easily extensible regex patterns and chunking strategies tailored to specific exam boards (e.g., Edexcel Biology, Edexcel Physics, AQA Religious Studies).
+- **Multi-LLM Provider Support**: Integrated via LangChain with support for OpenAI (GPT-4o/GPT-4), Google Gemini, and Anthropic Claude.
 
-**PdfFile Class**: Extracts text from PDFs and uses regular expressions to identify question numbers, mark allocations, and hierarchical markers (roman numerals and letters). It distinguishes between different document types such as Specifications and Mark Schemes.
+---
 
-**VectorStore Class**: Manages the embedding process using HuggingFace models and stores the resulting vectors in a FAISS index for local retrieval.
+## Tech Stack
 
-**DatabaseManager**: Executes the batch processing of entire folders, ensuring that metadata (subject, examiner, topic, and year) is correctly attached to each data chunk.
+- **Core & Logic**: Python 3.10+
+- **RAG & Orchestration**: [LangChain](https://github.com/langchain-ai/langchain) (`langchain-openai`, `langchain-huggingface`, `langchain-google-genai`, `langchain-anthropic`)
+- **Vector Storage**: [FAISS](https://github.com/facebookresearch/faiss) (Facebook AI Similarity Search)
+- **Embeddings**: HuggingFace SentenceTransformers & OpenAI Embeddings
+- **PDF Extraction & Parsing**: `pypdf`, custom Regex structural parsers
+- **Environment & Config**: `python-dotenv`, PyYAML, dataclasses
 
-### 2. Examination Engine (generate_content.py)
-The main controller responsible for synthesising exams.
+---
 
-**RAG Pipeline**: Employs LangChain to query the FAISS database, retrieving relevant context from specifications to inform the LLM during question generation.
+## System Architecture
 
-**Structural Synthesis**: Analyses the "parent-child" relationship of questions in past papers to replicate specific exam layouts (e.g., a lead-in description followed by multiple related sub-parts).
+```
+GCSE AI/
+├── data/                       # Ingested PDF specs, past papers, mark schemes
+├── user_data/                  # FAISS vector indexes & processed metadata
+├── prompts/                    # System prompts & generation templates
+├── config.py                   # Subject-examiner regex patterns & RAG configs
+├── load_and_store.py           # PDF extraction & FAISS vector store management
+├── ingest.py                   # Data ingestion & vectorization script
+├── exam_generator.py           # Core examination synthesis engine
+├── generate_content.py         # Content generation orchestrator
+├── exam_marker.py              # Vision OCR & automated grading engine
+├── chatbot.py                  # Interactive query & assessment interface
+├── similarity.py               # Semantic similarity & topic matching utilities
+└── llm_client.py               # Multi-provider LLM client wrappers
+```
 
-**Semantic Similarity**: Uses OpenAI embeddings to compare topic strings and ensure that generated questions maintain a high degree of relevance to the syllabus while avoiding repetitive content.
+---
 
-### 3.  Evaluating student performance (generate_content.py)
+## Getting Started
 
-The system includes tools for automated marking of student generated content
+### 1. Prerequisites
+- Python 3.10 or higher
+- An API Key for OpenAI, Google Gemini, or Anthropic
 
-**OCR Integration**: Converts images of student answers into text using vision-capable models, allowing for the assessment of handwritten work.
+### 2. Installation
 
-**Mark Scheme Generation**: When an official mark scheme is unavailable for a generated question, the system synthesises one based on the specification and historical marking patterns.
+Clone the repository and install the dependencies:
 
-**Evaluative Logic**: Compares student responses against synthesised or retrieved mark schemes to provide specific mark awards and model answers.
+```bash
+git clone https://github.com/pisiyan/GCSE-AI.git
+cd GCSE-AI
+python -m venv venv
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+### 3. Environment Setup
+
+Create a `.env` file in the root directory:
+
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+GOOGLE_API_KEY=your_google_gemini_api_key_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+```
+
+---
+
+## Usage
+
+### 1. Ingest Curriculum & Past Papers
+Process PDF specifications and past mark schemes into local FAISS vector stores:
+```bash
+python ingest.py
+```
+
+### 2. Generate GCSE Exam Papers
+Synthesize a full exam paper based on subject configuration and topic selection:
+```bash
+python exam_generator.py
+```
+
+### 3. Automated Marking & Vision OCR
+Grade student submissions (including image/handwritten responses):
+```bash
+python exam_marker.py
+```
+
+### 4. Interactive Chatbot Interface
+Run the interactive console for custom topic queries and question generation:
+```bash
+python chatbot.py
+```
+
+---
+
+## Supported Subject Configurations
+
+Custom configurations and Regex parsing rules are defined in [config.py](file:///c:/Users/burak/IdeaProjects/GCSE%20AI/config.py):
+
+| Subject | Exam Board | Specification Chunk Size | Mark Scheme Chunk Size |
+| :--- | :--- | :--- | :--- |
+| **Biology** | Edexcel | 2000 chars | 1700 chars |
+| **Physics** | Edexcel | 2000 chars | 1700 chars |
+| **Religious Studies** | AQA | 3000 chars | 4000 chars |
+
+---
+
+## License
+
+This project is developed for educational and research purposes. All GCSE specifications and past paper rights belong to their respective exam boards (Edexcel / Pearson, AQA).
