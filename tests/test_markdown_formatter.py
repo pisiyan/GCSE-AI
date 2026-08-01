@@ -83,6 +83,33 @@ class TestMarkdownFormatter(unittest.TestCase):
         self.assertIn("**b)** This is context for part b.", md_output)
         self.assertIn("  * **i)** Explain the function of structure X. *(2 marks)*", md_output)
 
+    def test_format_exam_as_markdown_spec_trees(self):
+        exam_data = {
+            "structure": [[3]],
+            "spec_trees": {
+                "Topic A": {
+                    "spec_code": "Topic 1 (1.1-1.17)",
+                    "subtopics": ["Photosynthesis"]
+                }
+            },
+            "questions": {
+                "Topic A": [
+                    {
+                        "number": "1)",
+                        "text": "Explain photosynthesis.",
+                        "marks": 3,
+                        "subtopic": "Photosynthesis"
+                    }
+                ]
+            }
+        }
+
+        md_output = format_exam_as_markdown("Biology", "Edexcel", "Higher", exam_data)
+
+        self.assertIn("## Topic & Specification Breakdown", md_output)
+        self.assertIn("### Topic: Topic A (Specification Code: Topic 1 (1.1-1.17))", md_output)
+        self.assertIn("- **Subtopic:** Photosynthesis", md_output)
+
 
 if __name__ == '__main__':
     unittest.main()

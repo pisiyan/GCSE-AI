@@ -39,7 +39,7 @@ def test_physics():
     subtopics = list(spec_tree.keys())
     print("Available subtopics in specification:")
     for st in subtopics[:3]:
-        print(f"- {st}: {spec_tree[st].get('description')[:100]}...")
+        print(f"- {st}")
         
     if subtopics:
         target_subtopic = subtopics[0]
@@ -48,7 +48,7 @@ def test_physics():
             marks=4,
             exam_topic="Higher",
             subtopic=target_subtopic,
-            subtopic_info=spec_tree[target_subtopic]["description"],
+            subtopic_info=target_subtopic,
             subject="Physics",
             examiner="Edexcel"
         )

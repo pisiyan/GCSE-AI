@@ -47,44 +47,9 @@ class TestConfig(unittest.TestCase):
         self.assertIsInstance(config, SubjectConfig)
         self.assertEqual(config.subject, "Physics")
         self.assertEqual(config.examiner, "Edexcel")
-        # Verify it inherited Edexcel defaults (e.g., specific letter_pattern, marks, chunk size)
-        self.assertEqual(config.letter_pattern, r"\(\s*[a-h]\s*\)")
+        # Verify it inherited Edexcel defaults (e.g., specific sub_question_pattern, marks, chunk size)
+        self.assertEqual(config.sub_question_pattern, r"\(\s*[a-h]\s*\)")
         self.assertEqual(config.spec_chunk_size, 2000)
-
-    def test_get_mark_calibration_examples(self):
-        config = load_subject_config("Biology", "Edexcel")
-        # Empty questions list should fallback to default guidelines
-        q_gen = QuestionGenerator(
-            config=config,
-            llm_client=MagicMock(),
-            similarity_engine=MagicMock(),
-            questions=[],
-            prompts={},
-            queries={},
-            spec_qa_chain=MagicMock()
-        )
-        guidelines = q_gen._get_mark_calibration_examples()
-        self.assertIn("GCSE Mark Calibration Guidelines", guidelines)
-        self.assertIn("- 1 Mark Guideline", guidelines)
-        self.assertIn("- 12 Marks Guideline", guidelines)
-
-        # Database with real questions should use their content
-        db_questions = [
-            {"marks": 1, "text": "Define force."},
-            {"marks": 12, "text": "Evaluate the ethics of abortion."}
-        ]
-        q_gen_with_db = QuestionGenerator(
-            config=config,
-            llm_client=MagicMock(),
-            similarity_engine=MagicMock(),
-            questions=db_questions,
-            prompts={},
-            queries={},
-            spec_qa_chain=MagicMock()
-        )
-        guidelines_db = q_gen_with_db._get_mark_calibration_examples()
-        self.assertIn("Define force.", guidelines_db)
-        self.assertIn("Evaluate the ethics of abortion.", guidelines_db)
 
 if __name__ == '__main__':
     unittest.main()

@@ -5,9 +5,28 @@ from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from exam_generator import ExamStructureBuilder
+from exam_generator import ExamStructureBuilder, _filter_by_exam_type
 
 class TestExamStructure(unittest.TestCase):
+    def test_filter_by_exam_type(self):
+        questions = [
+            {"text": "Q1", "exam_type": "Higher"},
+            {"text": "Q2", "exam_type": "Foundation"},
+            {"text": "Q3", "exam_type": "Higher"},
+            {"text": "Q4", "exam_type": ""},
+        ]
+        higher_qs = _filter_by_exam_type(questions, "Higher")
+        self.assertEqual(len(higher_qs), 2)
+        self.assertEqual([q["text"] for q in higher_qs], ["Q1", "Q3"])
+
+        foundation_qs = _filter_by_exam_type(questions, "Foundation")
+        self.assertEqual(len(foundation_qs), 1)
+        self.assertEqual(foundation_qs[0]["text"], "Q2")
+
+        # Unknown exam type falls back to unspecified ones
+        unknown_qs = _filter_by_exam_type(questions, "UnknownTier")
+        self.assertEqual(len(unknown_qs), 1)
+        self.assertEqual(unknown_qs[0]["text"], "Q4")
     def test_flatten_marks_int(self):
         self.assertEqual(ExamStructureBuilder.flatten_marks(5), 5)
 

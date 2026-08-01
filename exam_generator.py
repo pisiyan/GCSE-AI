@@ -12,7 +12,7 @@ import concurrent.futures
 from typing import Any, Optional, Dict, List
 
 import numpy as np
-from langchain.chains import RetrievalQA
+from langchain_classic.chains import RetrievalQA
 
 from config import SubjectConfig
 from llm_client import LLMClient
@@ -35,6 +35,128 @@ def is_practical_content(text: str) -> bool:
     text_lower = text.lower()
     keywords = ["investigate", "experiment", "graph", "table", "figure", "results", "measure", "apparatus", "method", "practical"]
     return any(kw in text_lower for kw in keywords)
+
+
+def generate_answer_lines(marks: Any, lines_per_mark: int = 2) -> str:
+    """Generate clean, properly formatted answer space lines for students to write their responses.
+
+    Args:
+        marks: Available marks for the question.
+        lines_per_mark: Number of lines per mark.
+
+    Returns:
+        Formatted string containing answer lines.
+    """
+    try:
+        m_val = int(marks)
+    except (ValueError, TypeError):
+        m_val = 1
+    if m_val <= 0:
+        m_val = 1
+
+    num_lines = max(2, min(m_val * lines_per_mark, 16))
+    line_str = "_" * 68
+    return "\n".join(["  " + line_str for _ in range(num_lines)])
+
+
+def fix_ocr_formatting(text: str) -> str:
+    """Reconstruct split words and clean up OCR spacing artifacts from raw PDF text."""
+    if not text:
+        return ""
+
+    cleaned = text
+
+    # Remove non-standard OCR symbol artifacts and bullet boxes
+    cleaned = re.sub(
+        r"[\u2022\u25a0\u25a1\u2571\u2572\u274c\u2713\ufffd\u200b\u200c\u200d\u200e\u200f\u202a-\u202e\u2060\u2069\u206a-\u206f\u2027\u2219\u25aa\u25ab\u25c6\u25c7\u25a2\u25a3\u25a4\u25a5\u25a6\u25a7\u25a8\u25a9\u25aa\u25ab\u25ac\u25ad\u25ae\u25af\u25b0\u25b1\u25b2\u25b3\u25b4\u25b5\u25b6\u25b7\u25b8\u25b9\u25ba\u25bb\u25bc\u25bd\u25be\u25bf\u25c0\u25c1\u25c2\u25c3\u25c4\u25c5\u25c6\u25c7\u25c8\u25c9\u25ca\u25cb\u25cc\u25cd\u25ce\u25cf\u25d0-\u25ff\uf000-\uf8ff]",
+        "",
+        cleaned,
+    )
+
+    # Reconstruct words split across line breaks (e.g., 'Bloodwor\nms' -> 'Bloodworms')
+    cleaned = re.sub(r"(\b[a-zA-Z]{3,})\s*[\r\n]+\s*([a-zA-Z]{1,3}\b)", r"\1\2", cleaned)
+    cleaned = re.sub(r"(\b[a-zA-Z]+)\s*-\s*[\r\n]+\s*([a-zA-Z]+)\b", r"\1-\2", cleaned)
+
+    # Reconstruct hyphenated words split by spaces (e.g., 'white - claw' -> 'white-claw')
+    cleaned = re.sub(r"(\b[a-zA-Z]+)\s*-\s*([a-zA-Z]+)\b", r"\1-\2", cleaned)
+
+    # Reconstruct single/double letter split words inside lines (e.g., 'sludgewor m' -> 'sludgeworm', 'Figur e' -> 'Figure')
+    cleaned = re.sub(r"\b([a-zA-Z]{3,})\s+([b-zB-Z]{1,2})\b", r"\1\2", cleaned)
+    cleaned = re.sub(r"\b([b-hj-zB-HJ-Z]{1})\s+([a-zA-Z]{3,})\b", r"\1\2", cleaned)
+
+    # Specific known GCSE terms and glued words that suffer OCR splitting
+    glued_fixes = {
+        "Bloodwor ms": "Bloodworms", "Bloodwor m": "Bloodworm", "bloodwor ms": "bloodworms", "bloodwor m": "bloodworm",
+        "sludgewor ms": "sludgeworms", "sludgewor m": "sludgeworm", "Figur e": "Figure", "figur e": "figure",
+        "in vasive": "invasive", "indica tes": "indicates", "indica te": "indicate", "fertil iser": "fertiliser",
+        "reac tion": "reaction", "concen tration": "concentration", "tempe rature": "temperature",
+        "expe riment": "experiment", "investiga tion": "investigation", "Car bon": "Carbon", "car bon": "carbon",
+        r"\bcolourof\b": "colour of", r"\bshownin\b": "shown in", r"\btestingfor\b": "testing for",
+        r"\bcanbe\b": "can be", r"\bsolutionof\b": "solution of", r"\bsolutionsof\b": "solutions of",
+        r"\bsolutionw as\b": "solution was", r"\bsolutionw\b": "solution", r"\bwateris\b": "water is",
+        r"\bsurvivein\b": "survive in", r"\bhaemoglobinin\b": "haemoglobin in", r"\blevelof\b": "level of"
+    }
+    for wrong, right in glued_fixes.items():
+        cleaned = re.sub(wrong, right, cleaned, flags=re.IGNORECASE)
+
+    # Format Multiple Choice options cleanly into bullets if detected (e.g. A opt B opt C opt D opt)
+    mc_pattern = r"\bA\s+([^\nB]+?)\s+B\s+([^\nC]+?)\s+C\s+([^\nD]+?)\s+D\s+([^\n]+)"
+    match = re.search(mc_pattern, cleaned)
+    if match:
+        a_opt = match.group(1).strip()
+        b_opt = match.group(2).strip()
+        c_opt = match.group(3).strip()
+        d_opt = match.group(4).strip()
+        mc_formatted = f"\n\n  * **A** {a_opt}\n  * **B** {b_opt}\n  * **C** {c_opt}\n  * **D** {d_opt}"
+        cleaned = cleaned[:match.start()] + mc_formatted + cleaned[match.end():]
+
+    return cleaned
+
+
+def clean_question_text(text: str) -> str:
+    """Clean raw question content by removing exam board boilerplate, codes, and junk text."""
+    if not text:
+        return ""
+
+    cleaned = text
+
+    # Remove margin instructions with OCR spacing glitches
+    cleaned = re.sub(r"(?i)DO\s*NO?\s*T?\s*WRITE?\s*IN?\s*THIS?\s*(?:AREA|MARGIN|PAGE).*", "", cleaned)
+    cleaned = re.sub(r"(?i)\(?\s*Total\s+for\s+Question.*", "", cleaned)
+    cleaned = re.sub(r"(?i)\(?\s*Total\s+\d+\s+marks?\s*\)?", "", cleaned)
+
+    # Remove exam paper instructions & boilerplate
+    cleaned = re.sub(r"(?i)Answer\s+ALL\s+questions.*", "", cleaned)
+    cleaned = re.sub(r"(?i)Write\s+your\s+answers\s+in\s+the\s+spaces\s+provided.*", "", cleaned)
+    cleaned = re.sub(r"(?i)Some\s+questions\s+must\s+be\s+answered\s+with\s+a\s+cross.*", "", cleaned)
+    cleaned = re.sub(r"(?i)If\s+you\s+change\s+your\s+mind.*", "", cleaned)
+    cleaned = re.sub(r"(?i)mark\s+your\s+new\s+answer.*", "", cleaned)
+    cleaned = re.sub(r"(?i)\bTurn\s+over\b", "", cleaned)
+    cleaned = re.sub(r"(?i)Pearson\s+Edexcel.*", "", cleaned)
+    cleaned = re.sub(r"\b[A-Z]\d{4,}[A-Z0-9]*\b", "", cleaned)
+    cleaned = re.sub(r"\*\s*[A-Z0-9]{5,}\s*\*", "", cleaned)
+
+    # Remove long dotted or underlined prompt lines
+    cleaned = re.sub(r"\.{3,}", "", cleaned)
+    cleaned = re.sub(r"_{3,}", "", cleaned)
+    cleaned = re.sub(r"(?m)^\s*\(\d+\)\s*$", "", cleaned)
+
+    # Reconstruct OCR words & split text
+    cleaned = fix_ocr_formatting(cleaned)
+
+    # Collapse multiple blank lines & spaces
+    lines = [line.strip() for line in cleaned.splitlines() if line.strip()]
+
+    # Filter out standalone page number lines or single digits
+    filtered_lines = []
+    for line in lines:
+        if line.isdigit() and len(line) <= 2:
+            continue
+        filtered_lines.append(line)
+
+    cleaned = "\n".join(filtered_lines)
+    cleaned = re.sub(r"^(?:Question\s*\d+\s*\(?[a-z]?\)?|\d+\s*\([a-z]\)|\d+\.)\s*", "", cleaned.strip(), flags=re.IGNORECASE)
+    return cleaned.strip()
 
 
 class ExamStructureBuilder:
@@ -60,12 +182,14 @@ class ExamStructureBuilder:
             marks: An int, or a list of ints/lists representing sub-question marks.
 
         Returns:
-            Total marks as an integer.
+            Total marks as an integer, or 0 if marks is None or an unrecognised type.
         """
+        if marks is None:
+            return 0
         if isinstance(marks, int):
             return marks
         if not isinstance(marks, list):
-            return marks
+            return 0
         total = 0
         for item in marks:
             if isinstance(item, list):
@@ -75,6 +199,46 @@ class ExamStructureBuilder:
             elif isinstance(item, int):
                 total += item
         return total
+
+    def get_valid_question_options(self, topic: Optional[str] = None) -> list[tuple[int, str]]:
+        """Parse all questions at the highest level (individual/parent questions) and record valid mark options.
+
+        Sub-questions / basic questions that are part of a parent question are NOT considered as standalone basic mark options.
+        Only basic questions that are not part of a parent question are recorded as basic mark options.
+
+        Returns:
+            List of (marks, question_type) tuples present in self.questions.
+        """
+        options = set()
+        for q in self.questions:
+            q_type = q.get("type")
+            is_parent = (
+                q_type == "parent_question"
+                or bool(q.get("parent_question_structure"))
+                or bool(q.get("sub_questions"))
+            )
+
+            if is_parent:
+                pqs = q.get("parent_question_structure")
+                m = self.flatten_marks(pqs)
+                if m > 0:
+                    options.add((m, "parent"))
+            else:
+                # Only basic questions NOT part of a parent question
+                m = q.get("marks")
+                if m and isinstance(m, int) and m > 0:
+                    options.add((m, "basic"))
+
+        # Fallback scan over all questions if type field is missing or unpopulated
+        if not options:
+            for q in self.questions:
+                pqs = q.get("parent_question_structure")
+                m = self.flatten_marks(pqs) if pqs else q.get("marks")
+                if m and isinstance(m, int) and m > 0:
+                    q_t = "parent" if (pqs or q.get("sub_questions")) else "basic"
+                    options.add((m, q_t))
+
+        return sorted(list(options), key=lambda x: (x[0], x[1]))
 
     def get_past_exam_structures(self, topic: str) -> list[list[list]]:
         """Extract mark structures from past exams for a given topic.
@@ -104,9 +268,15 @@ class ExamStructureBuilder:
                 current_exam = question["exam"]
 
             if question["type"] == "parent_question":
-                marks = [self.flatten_marks(question["parent_question_structure"]), "parent"]
+                pqs = question.get("parent_question_structure")
+                if pqs is None:
+                    continue
+                marks = [self.flatten_marks(pqs), "parent"]
             else:
-                marks = [question["marks"], "basic"]
+                q_marks = question.get("marks")
+                if q_marks is None:
+                    continue
+                marks = [q_marks, "basic"]
             exam_marks.append(marks)
 
         if exam_marks:
@@ -114,138 +284,118 @@ class ExamStructureBuilder:
 
         return all_exams
 
-    def build_structure(self, total_marks: int, topic: str) -> list:
-        """Build an exam structure that totals the given marks.
+    def _find_valid_combination(
+        self,
+        total_marks: int,
+        valid_options: list[tuple[int, str]],
+        target_num_questions: Optional[int] = None,
+    ) -> Optional[list[list]]:
+        """Find a valid sequence of [marks, type] from valid_options that sum exactly to total_marks.
 
-        Uses patterns from past papers to create a realistic exam structure.
-        Retries up to MAX_STRUCTURE_RETRIES times if the structure cannot be resolved.
+        If target_num_questions is specified, only combinations with that exact question count are returned.
+        """
+        if total_marks <= 0 or not valid_options:
+            return None
+
+        options = list(valid_options)
+        min_m = min(o[0] for o in options)
+        max_m = max(o[0] for o in options)
+
+        def dfs(remaining: int, current_path: list, depth: int) -> Optional[list]:
+            if remaining == 0:
+                if target_num_questions is None or len(current_path) == target_num_questions:
+                    return current_path
+                return None
+            if depth > 60:
+                return None
+
+            curr_len = len(current_path)
+            if target_num_questions is not None:
+                if curr_len >= target_num_questions:
+                    return None
+                rem_qs = target_num_questions - curr_len
+                if remaining < rem_qs * min_m or remaining > rem_qs * max_m:
+                    return None
+
+            fitting = [opt for opt in options if opt[0] <= remaining]
+            if not fitting:
+                return None
+
+            random.shuffle(fitting)
+            for m, t in fitting:
+                res = dfs(remaining - m, current_path + [[m, t]], depth + 1)
+                if res is not None:
+                    return res
+            return None
+
+        return dfs(total_marks, [], 0)
+
+    def build_structure(
+        self,
+        total_marks: int,
+        topic: str,
+        num_questions: Optional[int] = None,
+    ) -> list:
+        """Build an exam structure that totals the given marks using ONLY recorded valid question marks.
 
         Args:
             total_marks: Target total marks for the exam.
-            topic: The exam topic for retrieving past structures.
+            topic: The exam topic.
+            num_questions: Optional requested number of questions in the exam.
 
         Returns:
-            A list of mark structures (ints or nested lists for parent questions).
-
-        Raises:
-            RuntimeError: If a valid structure cannot be built within the retry limit.
+            A list of mark structures [marks, question_type] for each question.
         """
+        # 1. Parse all questions at highest level to record what marked questions are available
+        valid_options = self.get_valid_question_options(topic)
+        if not valid_options:
+            valid_options = self.get_valid_question_options(None)
+
+        if not valid_options:
+            raise ValueError(f"No valid questions found in database for topic '{topic}'.")
+
+        logger.info("Recorded %d valid question mark options: %s", len(valid_options), valid_options)
+
+        # 2. If explicit num_questions requested, try to generate a combination with exactly num_questions
+        if num_questions is not None and isinstance(num_questions, int) and num_questions > 0:
+            logger.info("Attempting to build structure with requested %d questions for %d marks...", num_questions, total_marks)
+            comb = self._find_valid_combination(total_marks, valid_options, target_num_questions=num_questions)
+            if comb is not None and sum(x[0] for x in comb) == total_marks and len(comb) == num_questions:
+                logger.info("Successfully built structure with requested %d questions: %s", num_questions, comb)
+                return comb
+            else:
+                logger.warning(
+                    "Impossible to generate an exam with exactly %d questions for %d marks using available question options. "
+                    "Falling back to automatic question count selection.",
+                    num_questions, total_marks
+                )
+
+        # 3. Check if a past exam structure sums to exact total_marks using ONLY valid options
         past_structures = self.get_past_exam_structures(topic)
-        if not past_structures:
-            raise ValueError(f"No past exam structures found for topic: {topic}")
+        if past_structures:
+            for exam_struct in past_structures:
+                current_sum = 0
+                candidate_struct = []
+                for q_m, q_t in exam_struct:
+                    if (q_m, q_t) in valid_options and current_sum + q_m <= total_marks:
+                        candidate_struct.append([q_m, q_t])
+                        current_sum += q_m
+                        if current_sum == total_marks:
+                            logger.info("Found past exam pattern matching exact %d marks", total_marks)
+                            return candidate_struct
 
-        avg_marks = sum(m[0] for m in past_structures[0]) / len(past_structures[0])
-        n_questions = round(total_marks / avg_marks)
-
+        # 4. Generate a combination automatically using ONLY valid question mark options that sum to total_marks
         max_retries = getattr(self.config, "max_structure_retries", MAX_STRUCTURE_RETRIES)
         for retry in range(max_retries):
-            try:
-                structure = self._attempt_build(
-                    total_marks, n_questions, past_structures, topic
-                )
-                if structure is not None:
-                    logger.info("Exam structure built successfully on attempt %d", retry + 1)
-                    return structure
-            except (IndexError, ValueError) as e:
-                logger.debug("Structure attempt %d failed: %s", retry + 1, e)
+            comb = self._find_valid_combination(total_marks, valid_options, target_num_questions=None)
+            if comb is not None and sum(x[0] for x in comb) == total_marks:
+                logger.info("Exam structure built automatically on attempt %d: %s", retry + 1, comb)
+                return comb
 
         raise RuntimeError(
-            f"Could not build valid exam structure after {max_retries} attempts "
+            f"Could not build valid exam structure using available question marks after {max_retries} attempts "
             f"for {total_marks} marks on topic '{topic}'"
         )
-
-    def _attempt_build(
-        self,
-        total_marks: int,
-        n_questions: int,
-        past_structures: list[list[list]],
-        topic: str,
-    ) -> Optional[list]:
-        """Single attempt to build an exam structure.
-
-        Returns:
-            The completed structure, or None if this attempt failed.
-        """
-        exam_structure = []
-        last_type = ""
-        marks_left = total_marks
-
-        for i in range(n_questions):
-            possible_marks = []
-            for exam in past_structures:
-                if i < len(exam):
-                    possible_marks.append(exam[i])
-
-            valid_marks = [m for m in possible_marks if m[0] <= marks_left]
-            if valid_marks:
-                chosen = random.choice(valid_marks)
-            else:
-                chosen = [0, last_type]
-
-            exam_structure.append(chosen)
-            marks_left -= chosen[0]
-            last_type = chosen[1]
-
-        # Distribute remaining marks to the last question
-        if marks_left != 0 and exam_structure:
-            exam_structure[-1][0] += marks_left
-
-        # Resolve parent question structures
-        return self._resolve_structures(exam_structure, past_structures, topic)
-
-    def _resolve_structures(
-        self,
-        exam_structure: list[list],
-        past_structures: list[list[list]],
-        topic: str,
-    ) -> Optional[list]:
-        """Resolve abstract mark allocations into concrete question structures.
-
-        For parent questions, finds matching structures from past papers.
-        """
-        final_structure = []
-        question_number = 0
-        last_exam = ""
-
-        for question in exam_structure:
-            marks = question[0]
-            question_type = question[1]
-
-            if question_type == "parent":
-                possible_structures = []
-                q_counter = 0
-
-                for q in self.questions:
-                    if q["type"] not in ("parent_question", "basic_question"):
-                        continue
-                    q_counter += 1
-                    if q["exam"] != last_exam:
-                        last_exam = q["exam"]
-                        q_counter = 0
-
-                    matches_marks = (
-                        q["type"] == "parent_question" 
-                        and q.get("parent_question_structure") is not None
-                        and self.flatten_marks(q["parent_question_structure"]) == marks
-                    )
-                    matches_topic = q["topic"] == topic
-                    matches_position = (
-                        q_counter == exam_structure.index(question)
-                        or not self.config.question_no_importance
-                    )
-
-                    if matches_marks and matches_topic and matches_position:
-                        possible_structures.append(q["parent_question_structure"])
-
-                if not possible_structures:
-                    return None  # Signal retry needed
-
-                marks = random.choice(possible_structures)
-                question_number += 1
-
-            final_structure.append(marks)
-
-        return final_structure
 
     @staticmethod
     def distribute_to_topics(
@@ -333,13 +483,13 @@ class LocalSimilarityEngine:
 
         all_texts = [query] + candidates
         embeddings = self.get_embeddings(all_texts)
-        
+
         q_emb = np.array(embeddings[0])
         c_embs = np.array(embeddings[1:])
 
         norms = np.linalg.norm(c_embs, axis=1)
         q_norm = np.linalg.norm(q_emb)
-        
+
         # Avoid division by zero
         norms = np.where(norms == 0, 1.0, norms)
         q_norm = 1.0 if q_norm == 0 else q_norm
@@ -397,77 +547,6 @@ class LocalSimilarityEngine:
 
         return selected
 
-
-    def find_least_similar_objects(
-        self,
-        objects: list[dict],
-        comparison: str,
-        n: int,
-        topic_value: str = "",
-        marks_value: Optional[int] = None,
-    ) -> list[str]:
-        """Filter past questions, score by similarity, return n LEAST similar to prevent duplicates."""
-        target_calc = is_calculation_content(comparison)
-        target_pract = is_practical_content(comparison)
-
-        filtered = []
-        shuffled = objects.copy()
-        random.shuffle(shuffled)
-
-        for obj in shuffled:
-            matches_topic = (not topic_value) or obj.get("topic") == topic_value
-            matches_marks = (marks_value is None) or obj.get("marks") == marks_value
-            if not (matches_topic and matches_marks):
-                continue
-
-            obj_content = obj.get("question_content", "") or ""
-            obj_calc = is_calculation_content(obj_content)
-            obj_pract = is_practical_content(obj_content)
-
-            # Filter/Prioritize based on cognitive type matching
-            if target_calc and not obj_calc:
-                continue
-            if target_pract and not obj_pract:
-                continue
-            if not target_calc and not target_pract and (obj_calc or obj_pract):
-                continue
-
-            filtered.append(obj)
-            if len(filtered) >= n * 2:  # Subset limit for speed
-                break
-
-        # Fallback: if we didn't find enough matches, relax the cognitive constraint
-        if len(filtered) < n:
-            filtered = []
-            for obj in shuffled:
-                matches_topic = (not topic_value) or obj.get("topic") == topic_value
-                matches_marks = (marks_value is None) or obj.get("marks") == marks_value
-                if matches_topic and matches_marks:
-                    filtered.append(obj)
-                if len(filtered) >= n * 2:
-                    break
-
-        if not filtered:
-            return []
-
-        contents = [obj["question_content"] for obj in filtered]
-        all_texts = [comparison] + contents
-        embeddings = self.get_embeddings(all_texts)
-
-        q_emb = np.array(embeddings[0])
-        c_embs = np.array(embeddings[1:])
-
-        norms = np.linalg.norm(c_embs, axis=1)
-        q_norm = np.linalg.norm(q_emb)
-        norms = np.where(norms == 0, 1.0, norms)
-        q_norm = 1.0 if q_norm == 0 else q_norm
-
-        similarities = c_embs @ q_emb / (norms * q_norm)
-        scored = list(zip(contents, similarities))
-        scored.sort(key=lambda x: x[1])  # Ascending order (least similar first)
-
-        return [item[0] for item in scored[:n]]
-
     def pick_least_similar(self, candidates: list[str], used: list[str]) -> str:
         """Pick a candidate from the least similar half vs used items to encourage diversity."""
         if not candidates:
@@ -497,6 +576,37 @@ class LocalSimilarityEngine:
             return scored[-1][0]
 
         return random.choice(lower_half)[0]
+
+
+def _filter_by_exam_type(questions: list[dict], target_exam_type: str) -> list[dict]:
+    """Filter candidate questions to match the target exam_type.
+    
+    Excludes questions that explicitly belong to a different exam_type.
+    Falls back to untagged questions or all questions if no target match exists.
+    """
+    if not target_exam_type or not questions:
+        return list(questions)
+    
+    target_clean = str(target_exam_type).strip().lower()
+    
+    # 1. Questions that explicitly match target exam_type
+    exact_matches = [
+        q for q in questions
+        if q.get("exam_type") and str(q.get("exam_type")).strip().lower() == target_clean
+    ]
+    if exact_matches:
+        return exact_matches
+        
+    # 2. If no exact matches, fallback to questions without an explicit exam_type tag
+    unspecified = [
+        q for q in questions
+        if not q.get("exam_type")
+    ]
+    if unspecified:
+        return unspecified
+
+    # 3. Final safety fallback to all questions
+    return list(questions)
 
 
 class QuestionGenerator:
@@ -531,114 +641,76 @@ class QuestionGenerator:
         # Cache for specification trees
         self.spec_trees_cache: Dict[str, dict] = {}
 
-    def _get_mark_calibration_examples(self) -> str:
-        """Find real exemplar questions from the database for each mark weight to serve as calibration guidelines."""
-        import random
-        marks_needed = [1, 2, 3, 4, 6, 12]
-        examples = {}
-        
-        # Shuffle questions to get a random mix each time
-        shuffled_q = list(self.questions)
-        random.shuffle(shuffled_q)
-        
-        for q in shuffled_q:
-            q_marks = q.get("marks")
-            content = q.get("question_content") or q.get("text")
-            if q_marks in marks_needed and content and len(content) < 300:
-                examples[q_marks] = content.strip()
-                if len(examples) == len(marks_needed):
-                    break
-        
-        lines = ["GCSE Mark Calibration Guidelines (depth expected per mark weight):"]
-        for m in sorted(marks_needed):
-            ex = examples.get(m)
-            if ex:
-                ex_clean = " ".join(ex.split())
-                lines.append(f"- {m} Mark Example (DO this level of depth): \"{ex_clean}\"")
-            else:
-                if m == 1:
-                    lines.append("- 1 Mark Guideline: Single direct recall, simple identification, or multiple-choice question.")
-                elif m == 2:
-                    lines.append("- 2 Marks Guideline: State a fact/method and give one brief reason or detail.")
-                elif m == 3:
-                    lines.append("- 3 Marks Guideline: Multi-step simple calculation, or a concept explanation with two logical steps.")
-                elif m == 4:
-                    lines.append("- 4 Marks Guideline: Detailed explanation showing cause and effect, or calculation with conversions/formula showing.")
-                elif m == 6:
-                    lines.append("- 6 Marks Guideline: Structured, detailed scientific explanation or multi-faceted evaluation (requires dotted lines).")
-                elif m == 12:
-                    lines.append("- 12 Marks Guideline: AQA Religious Studies essay question. Must present arguments for and against a statement, plus a justified conclusion.")
-                    
-        return "\n".join(lines)
-
-    def _get_spec_tree_cached(self, topic: str, exam_topic: str) -> dict:
+    def _get_spec_tree_cached(self, topic: str, exam_type: str) -> dict:
         """Fetch specification chunks and compile them into a structured tree using a single LLM call."""
-        cache_key = f"{exam_topic}-{topic}"
+        cache_key = f"{exam_type}-{topic}"
         if cache_key in self.spec_trees_cache:
             return self.spec_trees_cache[cache_key]
 
         logger.info("Extracting and compiling specification hierarchy for: %s", cache_key)
-        
-        # 1. Retrieve raw spec documents directly from FAISS without LLM (or use full spec text)
+
         if self.specification_text:
             spec_content = self.specification_text
         else:
-            query = f"{exam_topic} {topic}"
+            query = f"{exam_type} {topic}"
             docs = []
             if self.spec_qa_chain and hasattr(self.spec_qa_chain, "retriever"):
                 try:
                     docs = self.spec_qa_chain.retriever.invoke(query)
                 except Exception as e:
                     logger.error("Failed to retrieve docs from spec retriever: %s", e)
-            
+
             spec_content = "\n\n".join(doc.page_content for doc in docs) if docs else "No specification details found."
 
-        # 2. Call LLM once to compile it into a structured subtopic/sub-subtopic tree
-        prompt = f"""You are an expert GCSE spec parser. Analyze the specification content for the topic "{topic}" below.
-Extract all key subtopics. For each subtopic, provide:
-1. "name": The subtopic name (e.g. 'Photosynthesis', 'Core Practical').
-2. "description": A summary of the core concepts or facts.
-3. "sub_subtopics": A list of specific concepts, requirements, or points, each with a 'name' and 'description'.
+        if exam_type and exam_type.strip().lower() not in topic.strip().lower():
+            full_topic_ref = f"{exam_type} - {topic}"
+        else:
+            full_topic_ref = topic
+
+        prompt = f"""You are an expert GCSE spec parser. Analyze the specification content below for the topic "{full_topic_ref}".
+First, locate "{full_topic_ref}" within the specification and find its specific specification number/code (e.g. 'Topic 1 (1.1 - 1.17)', 'Section 2.1 - 2.15', 'Specification Code 3.1 - 3.20', '6.1 - 6.6').
+Second, extract all key subtopics for "{full_topic_ref}" strictly and ONLY from the content belonging to that specific specification number/code for {exam_type if exam_type else 'this exam'}.
 
 Specification content:
 {spec_content}
 
 Return the output strictly as a JSON object matching this schema:
 {{
+  "spec_code": "The specific specification number/code found for {full_topic_ref} (e.g. Topic 1 / 1.1 - 1.17)",
   "subtopics": [
-    {{
-      "name": "Subtopic Name",
-      "description": "Short description of what is studied",
-      "sub_subtopics": [
-        {{
-          "name": "Sub-subtopic Name/Concept",
-          "description": "Specific detail or adaptation requirement"
-        }}
-      ]
-    }}
+    "Subtopic Name 1",
+    "Subtopic Name 2"
   ]
 }}
-Do not return any explanations, return only the JSON block (no ```json markdown wrapper, just raw JSON)."""
+Ensure that:
+1. "spec_code" contains the exact specification number or code range identified in the specification for "{full_topic_ref}".
+2. All items in "subtopics" are extracted strictly and ONLY from the content under that specific specification number/code for {exam_type if exam_type else 'the requested exam'}.
+3. Subtopics are possible subtopics to write questions of, so ensure each subtopic is appropriately scoped (avoiding items that are overly generic or hyper-specific).
+Do not return any explanations or markdown wrapper, return only raw JSON."""
 
         try:
             raw_tree = self.llm.invoke_json(prompt)
         except Exception as e:
             logger.error("Failed parsing specification tree via LLM: %s. Using fallback.", e)
-            raw_tree = {"subtopics": [{"name": topic, "description": topic, "sub_subtopics": []}]}
+            raw_tree = {"spec_code": topic, "subtopics": [topic]}
 
-        # Re-structure for clean lookups
-        tree = {}
-        for sub in raw_tree.get("subtopics", []):
-            name = sub.get("name", "")
-            if name:
-                tree[name] = {
-                    "description": sub.get("description", ""),
-                    "sub_subtopics": sub.get("sub_subtopics", [])
-                }
+        spec_code = str(raw_tree.get("spec_code", topic)).strip()
+        raw_subs = raw_tree.get("subtopics", [])
+        subtopics_list = []
+        if isinstance(raw_subs, list):
+            for sub in raw_subs:
+                if isinstance(sub, str) and sub.strip():
+                    subtopics_list.append(sub.strip())
+                elif isinstance(sub, dict) and sub.get("name"):
+                    subtopics_list.append(sub.get("name").strip())
 
-        if not tree:
-            # Fallback
-            tree = {topic: {"description": topic, "sub_subtopics": []}}
+        if not subtopics_list:
+            subtopics_list = [topic]
+
+        tree = {
+            "spec_code": spec_code,
+            "subtopics": subtopics_list
+        }
 
         self.spec_trees_cache[cache_key] = tree
         return tree
@@ -656,7 +728,7 @@ Do not return any explanations, return only the JSON block (no ```json markdown 
 
         all_texts = [query] + texts
         embeddings = self.local_similarity.get_embeddings(all_texts)
-        
+
         q_emb = np.array(embeddings[0])
         c_embs = np.array(embeddings[1:])
 
@@ -669,240 +741,219 @@ Do not return any explanations, return only the JSON block (no ```json markdown 
         best_idx = int(np.argmax(similarities))
         return candidate_qs[best_idx]
 
-    def _build_copied_sub_questions(self, structure: list, leaf_qs: list[dict], subtopics: list[str]) -> list[dict]:
-        letters = "abcdefghijklmn"
-        romans = ["i", "ii", "iii", "iv", "v", "vi"]
-        
-        parsed = []
-        leaf_iterator = iter(leaf_qs)
-        
-        for idx, item in enumerate(structure):
-            label = f"{letters[idx]})"
-            subtopic_name = subtopics[idx] if idx < len(subtopics) else (subtopics[-1] if subtopics else "")
-            
-            if isinstance(item, list):
-                # Sub-parent: contains grandchild questions
-                roman_list = []
-                for ridx, sub_item in enumerate(item):
-                    r_label = f"{romans[ridx]})"
-                    try:
-                        leaf_q = next(leaf_iterator)
-                        text = (leaf_q.get("question_content") or "").strip()
-                        marks = leaf_q.get("marks", 1)
-                    except StopIteration:
-                        text = ""
-                        marks = sub_item
-                    
-                    roman_list.append({
-                        "label": r_label,
-                        "text": text,
-                        "marks": marks,
-                        "subtopic": subtopic_name
+    def _clean_and_format_sub_questions(self, sub_questions: list[dict]) -> list[dict]:
+        """Clean redundant text from sub-questions and format nicely."""
+        cleaned = []
+        for sq in sub_questions:
+            item = {}
+            if "label" in sq:
+                item["label"] = sq["label"]
+            if "context" in sq and sq["context"]:
+                item["context"] = clean_question_text(sq["context"])
+            if "text" in sq and sq["text"]:
+                item["text"] = clean_question_text(sq["text"])
+            if "marks" in sq:
+                item["marks"] = sq["marks"]
+            if "sub_parts" in sq:
+                gqs = []
+                for gq in sq["sub_parts"]:
+                    gqs.append({
+                        "label": gq.get("label", ""),
+                        "text": clean_question_text(gq.get("text", "")),
+                        "marks": gq.get("marks", 1),
                     })
-                parsed.append({
-                    "label": label,
-                    "context": "",
-                    "sub_parts": roman_list,
-                    "subtopic": subtopic_name
-                })
-            else:
-                # Simple child question
-                try:
-                    leaf_q = next(leaf_iterator)
-                    text = (leaf_q.get("question_content") or "").strip()
-                    marks = leaf_q.get("marks", 1)
-                except StopIteration:
-                    text = ""
-                    marks = item
-                    
-                parsed.append({
-                    "label": label,
-                    "text": text,
-                    "marks": marks,
-                    "subtopic": subtopic_name
-                })
-        return parsed
+                item["sub_parts"] = gqs
+            cleaned.append(item)
+        return cleaned
 
     def _execute_generation_task(self, task: dict) -> dict:
         """Executes a single question generation task (called in parallel thread)."""
         mark_structure = task["mark_structure"]
-        exam_topic = task["exam_topic"]
-        subtopic = task.get("subtopic")
-        subtopic_data = task.get("subtopic_data")
+        exam_type = task["exam_type"]
+        subtopic = task.get("subtopic", "")
         subject = task["subject"]
         q_num = task["number"]
 
-        if isinstance(mark_structure, int):
-            # Basic standalone question
-            logger.info("Retrieving standalone question Q%d (%d marks) matching subtopic '%s'...", q_num, mark_structure, subtopic)
-            
-            # Filter candidates from past papers
-            # Priority 1: type basic_question and exact marks
+        # Parse mark structure & question type
+        if isinstance(mark_structure, list) and len(mark_structure) == 2 and isinstance(mark_structure[1], str):
+            target_marks, q_type = mark_structure[0], mark_structure[1]
+        elif isinstance(mark_structure, int):
+            target_marks, q_type = mark_structure, "basic"
+        else:
+            target_marks = ExamStructureBuilder.flatten_marks(mark_structure)
+            q_type = "parent" if isinstance(mark_structure, list) else "basic"
+
+        # Pre-filter candidate questions pool to match target exam_type
+        pool = _filter_by_exam_type(self.questions, exam_type)
+
+        if q_type == "parent":
+            logger.info("Retrieving parent question Q%d (%d marks) [%s] matching subtopic '%s'...", q_num, target_marks, exam_type, subtopic)
+
+            # Priority 1: parent_question with exact total marks within filtered pool
             candidates = [
-                q for q in self.questions 
-                if q.get("type") == "basic_question" and q.get("marks") == mark_structure
+                q for q in pool
+                if (q.get("type") == "parent_question" or q.get("parent_question_structure") or q.get("sub_questions"))
+                and ExamStructureBuilder.flatten_marks(q.get("parent_question_structure")) == target_marks
             ]
+            # Priority 2: any parent question within filtered pool
             if not candidates:
-                # Priority 2: any question type with the exact marks
-                candidates = [q for q in self.questions if q.get("marks") == mark_structure]
+                candidates = [
+                    q for q in pool
+                    if q.get("type") == "parent_question" or q.get("parent_question_structure") or q.get("sub_questions")
+                ]
+            # Priority 3: fallback all questions within filtered pool
             if not candidates:
-                # Priority 3: any basic question
-                candidates = [q for q in self.questions if q.get("type") == "basic_question"]
+                candidates = list(pool)
+            # Final safety fallback to all questions if pool was empty
             if not candidates:
-                # Priority 4: any question
                 candidates = list(self.questions)
 
-            # Find the most semantically similar question
+            # Prefer exact subtopic and topic metadata matches if present
+            sub_matches = [q for q in candidates if q.get("subtopic") and q.get("subtopic").lower() == subtopic.lower()]
+            if sub_matches:
+                candidates = sub_matches
+            else:
+                top_matches = [q for q in candidates if q.get("topic") and task.get("topic") and q.get("topic").lower() == task.get("topic").lower()]
+                if top_matches:
+                    candidates = top_matches
+
             q_best = self._find_most_similar_question(subtopic, candidates)
-            question_text = (q_best.get("question_content") or q_best.get("text") or "").strip()
+            parent_desc = clean_question_text(q_best.get("parent_description", "") or q_best.get("question_content", ""))
+            
+            orig_sub_qs = q_best.get("sub_questions", [])
+            cleaned_sub_qs = self._clean_and_format_sub_questions(orig_sub_qs)
 
             return {
                 "number": f"{q_num})",
-                "text": question_text,
-                "marks": mark_structure,
+                "parent_description": parent_desc,
+                "sub_questions": cleaned_sub_qs,
                 "subtopic": subtopic,
+                "subtopic_data": task.get("subtopic_data", {}),
+                "marks": target_marks,
                 "q_num": q_num
             }
 
         else:
-            # Parent question with sub-parts
-            logger.info("Retrieving parent question Q%d (structure: %s) matching subtopics '%s'...", q_num, mark_structure, subtopic)
-            
-            # Filter candidates from past papers
-            # Priority 1: type parent_question and exact parent_question_structure match
+            logger.info("Retrieving standalone question Q%d (%d marks) [%s] matching subtopic '%s'...", q_num, target_marks, exam_type, subtopic)
+
+            # Priority 1: standalone basic_question (NOT part of a parent question) with exact marks within filtered pool
             candidates = [
-                q for q in self.questions 
-                if q.get("type") == "parent_question" and q.get("parent_question_structure") == mark_structure
+                q for q in pool
+                if (q.get("type") == "basic_question" and not q.get("parent_question_structure") and not q.get("sub_questions"))
+                and q.get("marks") == target_marks
             ]
+            # Priority 2: any standalone basic question within filtered pool
             if not candidates:
-                # Priority 2: type parent_question and same flattened marks
-                flattened_marks = ExamStructureBuilder.flatten_marks(mark_structure)
                 candidates = [
-                    q for q in self.questions 
-                    if q.get("type") == "parent_question" and ExamStructureBuilder.flatten_marks(q.get("parent_question_structure")) == flattened_marks
+                    q for q in pool
+                    if q.get("type") == "basic_question" and not q.get("parent_question_structure") and not q.get("sub_questions")
                 ]
+            # Priority 3: fallback all questions within filtered pool
             if not candidates:
-                # Priority 3: any parent question
-                candidates = [q for q in self.questions if q.get("type") == "parent_question"]
+                candidates = list(pool)
+            # Final safety fallback to all questions if pool was empty
             if not candidates:
-                # Priority 4: any question
                 candidates = list(self.questions)
 
-            # Find the most semantically similar question using the subtopics summary
+            # Prefer exact subtopic and topic metadata matches if present
+            sub_matches = [q for q in candidates if q.get("subtopic") and q.get("subtopic").lower() == subtopic.lower()]
+            if sub_matches:
+                candidates = sub_matches
+            else:
+                top_matches = [q for q in candidates if q.get("topic") and task.get("topic") and q.get("topic").lower() == task.get("topic").lower()]
+                if top_matches:
+                    candidates = top_matches
+
             q_best = self._find_most_similar_question(subtopic, candidates)
-            
-            # Retrieve all child and grandchild questions for the chosen parent question
-            p_desc = q_best.get("parent_question_description")
-            p_exam = q_best.get("exam")
-            related = [
-                q for q in self.questions
-                if q.get("parent_question_description") == p_desc and q.get("exam") == p_exam
-            ]
-            leaf_qs = [
-                q for q in related 
-                if q.get("type") in ("child_question", "grandchild_question")
-            ]
-            
-            # Reconstruct sub_questions matching the exact parent question structure
-            top_level_subtopics = task.get("subtopics", [subtopic])
-            sub_questions = self._build_copied_sub_questions(
-                q_best.get("parent_question_structure") or mark_structure, 
-                leaf_qs, 
-                top_level_subtopics
-            )
+            question_text = clean_question_text(q_best.get("question_content") or q_best.get("text") or "")
 
             return {
                 "number": f"{q_num})",
-                "parent_description": q_best.get("parent_question_description", "").strip(),
-                "sub_questions": sub_questions,
+                "text": question_text,
+                "marks": target_marks,
                 "subtopic": subtopic,
+                "subtopic_data": task.get("subtopic_data", {}),
                 "q_num": q_num
             }
 
     def generate_exam(
         self,
-        exam_topic: str,
+        exam_type: str,
         total_marks: int,
         topics: list[str],
         subject: str,
         structure_builder: ExamStructureBuilder,
+        user_preferences: Optional[Any] = None,
+        num_questions: Optional[int] = None,
     ) -> dict[str, Any]:
         """Generate a complete exam using parallel generation.
 
         Args:
-            exam_topic: The broad exam category (e.g., "Higher", "Christianity").
+            exam_type: The exam type/tier (e.g., "Higher", "Christianity").
             total_marks: Total marks for the exam.
             topics: List of topic areas to cover.
             subject: The subject name.
             structure_builder: An ExamStructureBuilder instance.
+            user_preferences: Optional custom preferences.
+            num_questions: Optional requested number of questions in the exam.
 
         Returns:
-            Dict containing the exam structure and generated questions.
+            Dict containing the exam structure, specification trees, and generated questions.
         """
-        raw_structure = structure_builder.build_structure(total_marks, exam_topic)
+        raw_structure = structure_builder.build_structure(total_marks, exam_type, num_questions=num_questions)
         exam_structure = structure_builder.distribute_to_topics(raw_structure, topics)
         logger.info("Exam structure distributed: %s", exam_structure)
 
         # Prepare tasks for all questions across all topics
         tasks = []
         question_number = 0
+        spec_trees = {}
+
+        def _get_subtopics(tree_obj: Any) -> list[str]:
+            if isinstance(tree_obj, dict):
+                if "subtopics" in tree_obj and isinstance(tree_obj["subtopics"], list):
+                    return [s for s in tree_obj["subtopics"] if isinstance(s, str)]
+                return [k for k in tree_obj.keys() if not k.startswith("_")]
+            elif isinstance(tree_obj, list):
+                return [s for s in tree_obj if isinstance(s, str)]
+            return []
 
         for topic in exam_structure:
-            # 1. Compile specification hierarchy for this topic (uses 1 single structured LLM call)
-            spec_tree = self._get_spec_tree_cached(topic, exam_topic)
-            subtopics_pool = list(spec_tree.keys())
+            spec_tree = self._get_spec_tree_cached(topic, exam_type)
+            spec_trees[topic] = spec_tree
+            subtopics_pool = _get_subtopics(spec_tree)
             used_subtopics: list[str] = []
 
-            for mark in exam_structure[topic]:
+            for mark_info in exam_structure[topic]:
                 question_number += 1
                 
-                if isinstance(mark, list):
-                    # Parent question: allocate a distinct subtopic for each top-level part
-                    selected_subtopics = []
-                    selected_subtopics_data = []
-                    for _ in range(len(mark)):
-                        if not subtopics_pool:
-                            subtopics_pool = list(spec_tree.keys())
-                        subtopic = self.local_similarity.pick_least_similar(subtopics_pool, used_subtopics)
-                        if subtopic in subtopics_pool:
-                            subtopics_pool.remove(subtopic)
-                        used_subtopics.append(subtopic)
-                        selected_subtopics.append(subtopic)
-                        selected_subtopics_data.append(spec_tree[subtopic])
-                    
-                    tasks.append({
-                        "number": question_number,
-                        "topic": topic,
-                        "subtopics": selected_subtopics,
-                        "subtopics_data": selected_subtopics_data,
-                        "subtopic": ", ".join(selected_subtopics),  # backwards compatibility & summary display
-                        "mark_structure": mark,
-                        "exam_topic": exam_topic,
-                        "subject": subject
-                    })
-                else:
-                    # Basic standalone question
-                    if not subtopics_pool:
-                        subtopics_pool = list(spec_tree.keys())
-                    subtopic = self.local_similarity.pick_least_similar(subtopics_pool, used_subtopics)
-                    if subtopic in subtopics_pool:
-                        subtopics_pool.remove(subtopic)
-                    used_subtopics.append(subtopic)
+                # Single broad subtopic for the question
+                if not subtopics_pool:
+                    subtopics_pool = _get_subtopics(spec_tree)
+                subtopic = self.local_similarity.pick_least_similar(subtopics_pool, used_subtopics)
+                if subtopic in subtopics_pool:
+                    subtopics_pool.remove(subtopic)
+                used_subtopics.append(subtopic)
 
-                    tasks.append({
-                        "number": question_number,
-                        "topic": topic,
-                        "subtopic": subtopic,
-                        "subtopic_data": spec_tree[subtopic],
-                        "mark_structure": mark,
-                        "exam_topic": exam_topic,
-                        "subject": subject
-                    })
+                tasks.append({
+                    "number": question_number,
+                    "topic": topic,
+                    "subtopic": subtopic,
+                    "subtopic_data": spec_tree.get(subtopic, {}),
+                    "mark_structure": mark_info,
+                    "exam_type": exam_type,
+                    "subject": subject,
+                    "user_preferences": user_preferences,
+                })
 
-        # 2. Execute all tasks in parallel using a thread pool
-        exam_output: dict[str, Any] = {"structure": exam_structure, "questions": {}}
+        # Execute all tasks in parallel using a thread pool
+        exam_output: dict[str, Any] = {
+            "structure": exam_structure,
+            "spec_trees": spec_trees,
+            "questions": {}
+        }
         results = []
-        
+
         logger.info("Submitting %d question generation tasks to ThreadPoolExecutor...", len(tasks))
         max_workers = getattr(self.config, "max_parallel_workers", 10)
         with concurrent.futures.ThreadPoolExecutor(max_workers=min(max_workers, len(tasks) or 1)) as executor:
@@ -925,12 +976,10 @@ Do not return any explanations, return only the JSON block (no ```json markdown 
             exam_output["questions"].setdefault(topic, [])
 
         for res in results:
-            # find original task topic
             q_num = res["q_num"]
             orig_task = next(t for t in tasks if t["number"] == q_num)
             topic = orig_task["topic"]
-            
-            # remove helper key
+
             res.pop("q_num", None)
             exam_output["questions"][topic].append(res)
 

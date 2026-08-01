@@ -11,7 +11,7 @@ from typing import Any, Optional
 
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.chains import RetrievalQA
+from langchain_classic.chains import RetrievalQA
 
 from config import SubjectConfig
 from llm_client import LLMClient

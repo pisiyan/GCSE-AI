@@ -12,8 +12,8 @@ import time
 from typing import Any, Optional
 
 from langchain.chat_models import init_chat_model
-from langchain.schema import HumanMessage
-from langchain.chains import RetrievalQA
+from langchain_core.messages import HumanMessage
+from langchain_classic.chains import RetrievalQA
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +27,8 @@ class LLMClient:
 
     def __init__(
         self,
-        provider: str = "openai",
-        model: str = "gpt-4o",
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
         temperature: float = 0.0,
         max_retries: int = 3,
         retry_delay: float = 1.0,
@@ -37,14 +37,20 @@ class LLMClient:
         """Initialize the LLM Client.
 
         Args:
-            provider: Model provider ('openai', 'anthropic', 'google', etc.).
-            model: Model name.
+            provider: Model provider ('openai', 'anthropic', 'google', etc.). Defaults to LLM_PROVIDER or 'openai'.
+            model: Model name. Defaults to LLM_MODEL or 'gpt-4o-mini'.
             temperature: Sampling temperature.
             max_retries: Number of invoke retries on failure.
             retry_delay: Delay multiplier for retries.
             embedding_model: Optional override for the provider's embedding model.
         """
+        if provider is None:
+            provider = os.environ.get("LLM_PROVIDER", "openai")
+        if model is None:
+            model = os.environ.get("LLM_MODEL", "gpt-5.4-mini")
+
         self.provider = provider.lower()
+        self.model = model
         self.max_retries = max_retries
         self.retry_delay = retry_delay
 

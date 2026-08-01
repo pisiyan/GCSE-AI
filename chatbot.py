@@ -112,6 +112,13 @@ class ChatbotAgent:
         t0 = time.time()
         self.assistant = GcseAssistant(subject, examiner)
         Colors.print_green(f"Successfully loaded database in {time.time() - t0:.1f}s.")
+
+        # Discover valid exam types for this subject/examiner from the data directory
+        self.valid_exam_types: List[str] = GcseAssistant.get_valid_exam_types(subject, examiner)
+        if self.valid_exam_types:
+            Colors.print_cyan(f"Valid exam types for {subject} ({examiner}): {', '.join(self.valid_exam_types)}")
+        else:
+            Colors.print_warning(f"No Exam-Types directory found for {subject} ({examiner}). Exam type validation will be skipped.")
         
         self.history: List[Dict[str, str]] = []
         self.preferences: List[str] = []
@@ -130,6 +137,15 @@ class ChatbotAgent:
         trimmed_history = self.history[-12:]
 
         # 2. Construct Prompt
+        # Build exam-type constraint section for the prompt
+        if self.valid_exam_types:
+            exam_type_constraint = (
+                f"Valid exam types for this subject: {', '.join(self.valid_exam_types)}.\n"
+                f"You MUST use one of these exact strings for the \"exam_type\" parameter."
+            )
+        else:
+            exam_type_constraint = "No exam type list available — ask the user to specify the exam type."
+
         system_instruction = f"""You are the GCSE AI Chatbot Assistant for {self.subject} ({self.examiner}).
 Your goal is to help the user study, answer questions about syllabus/specification content, mark answers, and generate exams.
 
@@ -155,12 +171,19 @@ AVAILABLE ACTIONS:
      - "query": (str) The past paper search query.
 3. "generate_exam":
    Use this ONLY when the user requests generating a new exam.
-   VALIDATION REQUIREMENT: You MUST have all 3 parameters provided: `exam_topic` (e.g. Higher/Foundation), `total_marks` (int), and `topics` (list of strings).
-   If any parameter is missing, you must NOT trigger this action. Instead, use action "none" and ask the user to provide the missing parameter(s).
+   REQUIRED PARAMETERS: `exam_type` (e.g. {self.valid_exam_types[0] if self.valid_exam_types else 'Higher'}), `total_marks` (int), and `topics` (list of strings).
+   OPTIONAL PARAMETER: `num_questions` (int, optional) - Number of questions in the exam.
+   {exam_type_constraint}
+   QUESTION COUNT WORKFLOW:
+   - `num_questions` is optional.
+   - If the user specifies a question count (e.g. "make a 30 mark exam with 4 questions"), pass `num_questions`: 4.
+   - If the user HAS NOT specified or confirmed a question count, use action "none" and ask the user if they would like a specific number of questions or if they are happy with automatic question count selection.
+   - Once the user confirms (e.g. specifies "4 questions", or says "auto", "default", "I'm fine with auto"), trigger `generate_exam`. (Omit `num_questions` or set to null if auto/default).
    Params:
-     - "exam_topic": (str)
+     - "exam_type": (str)
      - "total_marks": (int)
      - "topics": (list of str)
+     - "num_questions": (int or null, optional)
 4. "mark_answer":
    Use this ONLY when the user wants to mark a student's answer.
    VALIDATION REQUIREMENT: You MUST have all 4 parameters provided: `question` (str), `marks` (int), `student_answer` (str), and `mark_scheme` (str).
@@ -231,18 +254,37 @@ IMPORTANT:
                 self.handle_action_error("query_past_papers", e)
 
         elif action == "generate_exam":
-            exam_topic = params.get("exam_topic")
+            exam_type = params.get("exam_type")
             total_marks = params.get("total_marks")
             topics = params.get("topics")
+            num_questions = params.get("num_questions")
+
+            if num_questions is not None:
+                try:
+                    num_questions = int(num_questions)
+                except (ValueError, TypeError):
+                    num_questions = None
             
-            # Validation checks
+            # Validation: required fields
             missing = []
-            if not exam_topic: missing.append("exam_topic")
+            if not exam_type: missing.append("exam_type")
             if not total_marks: missing.append("total_marks")
             if not topics: missing.append("topics")
             
             if missing:
                 err_msg = f"Validation Error: Cannot generate exam. Missing required parameter(s): {', '.join(missing)}."
+                Colors.print_fail(f"\n{err_msg}")
+                self.history.append({"role": "system", "content": err_msg})
+                self.run_agent_loop_followup()
+                return
+
+            # Validation: exam type must be in the known-valid list
+            if self.valid_exam_types and exam_type not in self.valid_exam_types:
+                err_msg = (
+                    f"Validation Error: '{exam_type}' is not a valid exam type for "
+                    f"{self.subject} ({self.examiner}). "
+                    f"Valid exam types are: {', '.join(self.valid_exam_types)}."
+                )
                 Colors.print_fail(f"\n{err_msg}")
                 self.history.append({"role": "system", "content": err_msg})
                 self.run_agent_loop_followup()
@@ -265,13 +307,27 @@ IMPORTANT:
                 return
 
             Colors.print_blue(f"\n[Exam Generator] Triggering parallel exam generation...")
-            Colors.print_blue(f"  - Level/Topic: {exam_topic}")
+            Colors.print_blue(f"  - Exam Type: {exam_type}")
             Colors.print_blue(f"  - Total Marks: {total_marks}")
             Colors.print_blue(f"  - Topic Areas: {topics}")
+            if num_questions:
+                Colors.print_blue(f"  - Requested Question Count: {num_questions}")
             
+            user_prefs = params.get("user_preferences", {})
+            if isinstance(user_prefs, str):
+                user_prefs = {"custom_instructions": user_prefs}
+            elif not isinstance(user_prefs, dict):
+                user_prefs = {}
+            if self.preferences:
+                user_prefs["stored_preferences"] = self.preferences
+
             try:
-                exam_data = self.assistant.make_exam(exam_topic, total_marks, topics)
-                exam_md = format_exam_as_markdown(self.subject, self.examiner, exam_topic, exam_data)
+                exam_data = self.assistant.make_exam(
+                    exam_type, total_marks, topics,
+                    user_preferences=user_prefs,
+                    num_questions=num_questions
+                )
+                exam_md = format_exam_as_markdown(self.subject, self.examiner, exam_type, exam_data)
                 
                 os.makedirs("test_outputs", exist_ok=True)
                 timestamp = int(time.time())
@@ -280,10 +336,30 @@ IMPORTANT:
                      f.write(exam_md)
                 Colors.print_green(f"  -> Generated exam saved to: {filename}")
 
-                # Quality analysis bypassed as per user request to speed up generation
-                obs_content = f"Exam generated successfully and saved to file '{filename}'."
+                # Output specification tree & selected subtopics to terminal during generation
+                spec_trees = exam_data.get("spec_trees", {})
+                if spec_trees:
+                    Colors.print_blue("\n[Specification Codes & Subtopics Extracted/Used]:")
+                    for top, tree_data in spec_trees.items():
+                        if isinstance(tree_data, dict):
+                            spec_code = tree_data.get("spec_code", "")
+                            subtopic_names = tree_data.get("subtopics", [])
+                            if not subtopic_names and "subtopics" not in tree_data:
+                                subtopic_names = [k for k in tree_data.keys() if not k.startswith("_")]
+                        else:
+                            spec_code = ""
+                            subtopic_names = tree_data if isinstance(tree_data, list) else []
+
+                        code_str = f" [{spec_code}]" if spec_code else ""
+                        Colors.print_cyan(f"  Topic: {top}{code_str}")
+                        for st_name in subtopic_names:
+                            Colors.print_cyan(f"    • Subtopic: {st_name}")
+
+                obs_content = (
+                    f"Exam generated successfully and saved to file '{filename}'. "
+                    f"Specification subtopics breakdown included in file and outputted during generation."
+                )
                 self.history.append({"role": "system", "content": obs_content})
-                self.run_agent_loop_followup()
             except Exception as e:
                 self.handle_action_error("generate_exam", e)
 
@@ -340,7 +416,6 @@ IMPORTANT:
                     f"Awarded score detail: {feedback}."
                 )
                 self.history.append({"role": "system", "content": obs_content})
-                self.run_agent_loop_followup()
             except Exception as e:
                 self.handle_action_error("mark_answer", e)
 

@@ -80,7 +80,7 @@ class TestChatbot(unittest.TestCase):
         self.mock_assistant.llm_client.invoke_json.return_value = {
             "thought": "Generating exam but missing topics",
             "action": "generate_exam",
-            "params": {"exam_topic": "Higher", "total_marks": 20},
+            "params": {"exam_type": "Higher", "total_marks": 20},
             "message": "Generating..."
         }
 

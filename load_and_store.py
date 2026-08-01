@@ -10,7 +10,7 @@ import os
 import re
 from typing import Optional
 
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -36,7 +36,8 @@ class PdfFile:
     """
 
     def __init__(
-        self, name: str, subject: str, examiner: str, doc_type: str
+        self, name: str, subject: str, examiner: str, doc_type: str,
+        exam_type: str = ""
     ) -> None:
         """Initialize a PdfFile.
 
@@ -45,9 +46,13 @@ class PdfFile:
             subject: Subject name (e.g., "Biology").
             examiner: Exam board name (e.g., "Edexcel").
             doc_type: Document type ("Specification", "MarkSchemes", or "QuestionPapers").
+            exam_type: Optional exam type/tier (e.g. "Higher", "Christianity"). When
+                provided it is stored in metadata and used to tag documents ingested
+                from an Exam-Types subfolder.
         """
         self.subject = subject
         self.examiner = examiner
+        self.exam_type_override = exam_type
         self.config = load_subject_config(subject, examiner)
         self.name = name
         self.meta_data = self._get_metadata()
@@ -60,40 +65,9 @@ class PdfFile:
             separator="",
         )
         self.marks_pattern = self.config.mark_pattern
-        self.letter_pattern = self.config.letter_pattern
-        self.roman_pattern = self.config.roman_pattern
+        self.sub_question_pattern = self.config.sub_question_pattern
+        self.sub_sub_question_pattern = self.config.sub_sub_question_pattern
         self.question_pattern = self.config.question_pattern
-
-    def first_marker_type(self, text: str) -> Optional[str]:
-        """Determine whether letters or roman numerals appear first in text.
-
-        Args:
-            text: The text to search for markers.
-
-        Returns:
-            "letter", "roman", or None if neither is found.
-        """
-        if self.letter_pattern and self.letter_pattern != "None":
-            letter_match = re.search(self.letter_pattern, text)
-        else:
-            letter_match = None
-
-        if self.roman_pattern and self.roman_pattern != "None":
-            roman_match = re.search(self.roman_pattern, text)
-        else:
-            roman_match = None
-
-        letter_pos = letter_match.start() if letter_match else None
-        roman_pos = roman_match.start() if roman_match else None
-
-        if letter_pos is None and roman_pos is None:
-            return None
-        elif letter_pos is None:
-            return "roman"
-        elif roman_pos is None:
-            return "letter"
-        else:
-            return "letter" if letter_pos < roman_pos else "roman"
 
     def extract_mark(self, text: str, pattern: str) -> Optional[int]:
         """Extract a mark value from text using a regex pattern.
@@ -172,35 +146,10 @@ class PdfFile:
                 result.append(item)
         return result
 
-    def is_parent_question_valid(
-        self, parent_question: dict, questions: list[dict]
-    ) -> bool:
-        """Check if a parent question's structure matches its child questions.
-
-        Args:
-            parent_question: The parent question dict.
-            questions: All questions from the same exam.
-
-        Returns:
-            True if the structure matches the child question marks.
-        """
-        structure = self.flatten(parent_question["parent_question_structure"])
-        child_marks = [
-            q["marks"]
-            for q in questions
-            if (
-                q["marks"] is not None
-                and q["parent_question_description"]
-                == parent_question["parent_question_description"]
-            )
-        ]
-        return structure == child_marks
-
     def extract_question_documents(self, content: str) -> list[Document]:
         """Extract questions from exam paper content and return as Document chunks.
 
-        Parses the content into individual questions, validates parent questions,
-        and constructs Document objects.
+        Parses the content into individual questions and constructs Document objects.
 
         Args:
             content: The full text content of the exam paper.
@@ -215,16 +164,14 @@ class PdfFile:
 
         docs = []
         for question in question_info:
-            parent_valid = False
-            if question["type"] == "parent_question":
-                parent_valid = self.is_parent_question_valid(question, question_info)
-            if question["marks"] is not None or parent_valid:
-                content_str = question.pop("question_content") or ""
-                meta = question.copy()
-                meta["q_type"] = meta.pop("type")
-                if meta.get("parent_question_structure"):
-                    meta["parent_question_structure"] = json.dumps(meta["parent_question_structure"])
-                docs.append(Document(page_content=str(content_str), metadata=meta))
+            content_str = question.pop("question_content") or ""
+            meta = question.copy()
+            meta["q_type"] = meta.pop("type")
+            if meta.get("parent_question_structure"):
+                meta["parent_question_structure"] = json.dumps(meta["parent_question_structure"])
+            if meta.get("sub_questions"):
+                meta["sub_questions"] = json.dumps(meta["sub_questions"])
+            docs.append(Document(page_content=str(content_str), metadata=meta))
 
         logger.info("Extracted %d question chunks", len(docs))
         return docs
@@ -284,12 +231,15 @@ class PdfFile:
             return chunks
 
     def _get_metadata(self) -> dict[str, str]:
-        """Extract metadata from the PDF filename.
+        """Extract metadata from the PDF filename and folder path.
 
-        Expects filenames in format: subject-examiner-type-topic-time.pdf
+        For files under an ``Exam-Types/{ExamType}/`` subtree the exam type is
+        detected from the path and stored as ``exam_type`` in the metadata dict.
+        The filename convention is still: subject-examiner-type-topic-time.pdf
 
         Returns:
-            Dict with keys: subject, examiner, type, topic, time.
+            Dict with keys: subject, examiner, type, topic, time, and optionally
+            exam_type.
         """
         keys = ["subject", "examiner", "type", "topic", "time"]
         basename = os.path.basename(self.name)
@@ -301,18 +251,132 @@ class PdfFile:
             if i < len(keys):
                 meta_data[keys[i]] = value
 
+        # Detect exam type from folder path (e.g. .../Exam-Types/Christianity/questionPapers/)
+        exam_type = self.exam_type_override
+        if not exam_type:
+            norm_path = os.path.normpath(self.name)
+            parts = norm_path.split(os.sep)
+            try:
+                et_idx = next(
+                    i for i, p in enumerate(parts)
+                    if p.lower() == "exam-types"
+                )
+                # The directory immediately after "Exam-Types" is the exam type
+                if et_idx + 1 < len(parts):
+                    exam_type = parts[et_idx + 1]
+            except StopIteration:
+                pass
+
+        if exam_type:
+            meta_data["exam_type"] = exam_type
+
         logger.debug("Extracted metadata: %s", meta_data)
         return meta_data
+
+    def _get_specification_structure(self) -> dict[str, list[str]]:
+        """Load and parse specification topics and subtopics for this subject/examiner."""
+        subject = getattr(self, "subject", "")
+        examiner = getattr(self, "examiner", "")
+        if not subject or not examiner:
+            return {}
+
+        spec_dir = os.path.normpath(f"data/{subject}/{examiner}/Specification")
+        if not os.path.exists(spec_dir):
+            return {}
+
+        txt_files = [f for f in os.listdir(spec_dir) if f.lower().endswith(".txt")]
+        spec_text = ""
+        if txt_files:
+            try:
+                with open(os.path.join(spec_dir, txt_files[0]), "r", encoding="utf-8") as f:
+                    spec_text = f.read()
+            except Exception:
+                pass
+
+        if not spec_text:
+            return {}
+
+        structure: dict[str, list[str]] = {}
+        topic_pattern = r"(?:Topic\s+\d+|Section\s+\d+|Paper\s+\d+)\s*[–\-:\s]+([^\n]+)"
+        topics_found = re.findall(topic_pattern, spec_text, re.IGNORECASE)
+
+        for top in topics_found[:15]:
+            top_clean = top.strip()
+            if top_clean and len(top_clean) > 3:
+                structure[top_clean] = []
+
+        sub_pattern = r"(\d+\.\d+)\s+([^\n]+)"
+        sub_matches = re.findall(sub_pattern, spec_text)
+
+        for code, sub_title in sub_matches:
+            prefix = code.split(".")[0]
+            target_key = None
+            for key in structure.keys():
+                if f"topic {prefix}" in key.lower() or f"{prefix}." in key:
+                    target_key = key
+                    break
+            if not target_key and structure:
+                target_key = list(structure.keys())[0]
+
+            if target_key:
+                structure[target_key].append(f"{code} {sub_title.strip()[:60]}")
+
+        return structure
+
+    def classify_question_topic_and_subtopic(
+        self, question_text: str, file_topic: str
+    ) -> tuple[str, str]:
+        """Classify a question into its specification topic first, and then subtopic.
+
+        Args:
+            question_text: Full text of the question.
+            file_topic: Default topic derived from filename metadata.
+
+        Returns:
+            Tuple of (classified_topic, classified_subtopic).
+        """
+        spec_structure = self._get_specification_structure()
+        if not spec_structure:
+            return file_topic, file_topic
+
+        # Step 1: Define Topic using specification structure
+        matched_topic = file_topic
+        for topic_name in spec_structure.keys():
+            if topic_name.lower() in file_topic.lower() or file_topic.lower() in topic_name.lower():
+                matched_topic = topic_name
+                break
+
+        if matched_topic == file_topic:
+            best_topic_score = 0
+            for topic_name in spec_structure.keys():
+                score = sum(1 for word in topic_name.lower().split() if len(word) > 3 and word in question_text.lower())
+                if score > best_topic_score:
+                    best_topic_score = score
+                    matched_topic = topic_name
+
+        # Step 2: Define Subtopic under the identified Topic
+        subtopics = spec_structure.get(matched_topic, [])
+        matched_subtopic = matched_topic
+
+        if subtopics:
+            best_subtopic_score = -1
+            for subtopic_name in subtopics:
+                keywords = [w for w in re.findall(r'\w+', subtopic_name.lower()) if len(w) > 3]
+                score = sum(1 for kw in keywords if kw in question_text.lower())
+                if score > best_subtopic_score:
+                    best_subtopic_score = score
+                    matched_subtopic = subtopic_name
+
+        return matched_topic, matched_subtopic
 
     def process_questions(
         self, questions: list[str], topic: str, exam: str
     ) -> list[dict]:
         """Process raw question text splits into structured question dicts.
 
-        Handles three levels of question nesting:
+        Handles nested questions:
         - basic_question: standalone questions
-        - parent_question: questions with letter-labeled sub-parts
-        - grandchild_question: sub-parts with roman numeral sub-sub-parts
+        - parent_question: questions with sub-parts and grandchild sub-sub-parts
 
         Args:
             questions: List of raw question text strings.
@@ -323,105 +387,103 @@ class PdfFile:
             List of structured question dictionaries.
         """
         questions_info: list[dict] = []
+        
+        letters = "abcdefghijklmn"
+        romans = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"]
+
+        sub_q_pat = self.sub_question_pattern
+        sub_sub_q_pat = self.sub_sub_question_pattern
 
         for question in questions:
-            first_marker = self.first_marker_type(question)
+            question_stripped = question.strip()
+            if not question_stripped:
+                continue
 
-            if first_marker is not None:
-                # This question has sub-parts
-                if first_marker == "letter":
-                    sub_questions = re.split(self.letter_pattern, question)
-                else:
-                    sub_questions = re.split(self.roman_pattern, question)
+            # Classify official specification topic first, then subtopic
+            classified_topic, classified_subtopic = self.classify_question_topic_and_subtopic(
+                question_stripped, topic
+            )
 
-                parent_description = sub_questions.pop(0)
-                question_structure: list = []
+            has_sub = False
+            sub_questions_list = []
+            question_structure = []
+            parent_description = ""
 
-                for sub_question in sub_questions:
-                    sub_marker = self.first_marker_type(sub_question)
+            if sub_q_pat and sub_q_pat != "None":
+                splits = re.split(sub_q_pat, question)
+                if len(splits) > 1:
+                    has_sub = True
+                    parent_description = splits[0].strip()
+                    sub_question_texts = splits[1:]
 
-                    if sub_marker is None:
-                        # Simple sub-question
-                        marks = self.extract_mark(sub_question, self.marks_pattern)
-                        question_structure.append(marks)
-                        questions_info.append(
-                            {
-                                "type": "child_question",
-                                "topic": topic,
-                                "marks": marks,
-                                "question_content": sub_question,
-                                "parent_question_structure": None,
-                                "parent_question_description": parent_description,
-                            }
-                        )
-                    else:
-                        # Sub-question with its own sub-parts (grandchildren)
-                        if sub_marker == "letter":
-                            sub_sub_questions = re.split(
-                                self.letter_pattern, sub_question
-                            )
+                    for idx, sq_text in enumerate(sub_question_texts):
+                        label = f"{letters[idx]})"
+                        # Check if this sub-question has sub-sub-questions
+                        has_sub_sub = False
+                        sub_sub_texts = []
+                        sq_intro = ""
+                        
+                        if sub_sub_q_pat and sub_sub_q_pat != "None":
+                            ss_splits = re.split(sub_sub_q_pat, sq_text)
+                            if len(ss_splits) > 1:
+                                has_sub_sub = True
+                                sq_intro = ss_splits[0].strip()
+                                sub_sub_texts = ss_splits[1:]
+
+                        if has_sub_sub:
+                            sub_sub_list = []
+                            sub_sub_structure = []
+                            for ss_idx, ss_text in enumerate(sub_sub_texts):
+                                ss_marks = self.extract_mark(ss_text, self.marks_pattern)
+                                r_label = f"{romans[ss_idx]})"
+                                sub_sub_structure.append(ss_marks)
+                                sub_sub_list.append({
+                                    "label": r_label,
+                                    "text": ss_text.strip(),
+                                    "marks": ss_marks
+                                })
+                            question_structure.append(sub_sub_structure)
+                            sub_questions_list.append({
+                                "label": label,
+                                "context": sq_intro,
+                                "sub_parts": sub_sub_list
+                            })
                         else:
-                            sub_sub_questions = re.split(
-                                self.roman_pattern, sub_question
-                            )
+                            sq_marks = self.extract_mark(sq_text, self.marks_pattern)
+                            question_structure.append(sq_marks)
+                            sub_questions_list.append({
+                                "label": label,
+                                "text": sq_text.strip(),
+                                "marks": sq_marks
+                            })
 
-                        parent_child_description = sub_sub_questions.pop(0)
-                        sub_structure: list = []
-
-                        for sub_sub_question in sub_sub_questions:
-                            marks = self.extract_mark(
-                                sub_sub_question, self.marks_pattern
-                            )
-                            sub_structure.append(marks)
-                            questions_info.append(
-                                {
-                                    "type": "grandchild_question",
-                                    "topic": topic,
-                                    "marks": marks,
-                                    "question_content": sub_sub_question,
-                                    "parent_question_structure": None,
-                                    "parent_question_description": parent_description,
-                                }
-                            )
-
-                        questions_info.append(
-                            {
-                                "type": "parent_child_question",
-                                "topic": topic,
-                                "marks": None,
-                                "question_content": None,
-                                "parent_question_structure": sub_structure,
-                                "parent_question_description": parent_description,
-                            }
-                        )
-                        question_structure.append(sub_structure)
-
-                questions_info.append(
-                    {
-                        "type": "parent_question",
-                        "topic": topic,
-                        "marks": None,
-                        "question_content": question,
-                        "parent_question_structure": question_structure,
-                        "parent_question_description": parent_description,
-                    }
-                )
+            meta_dict = getattr(self, "meta_data", {})
+            exam_type = meta_dict.get("exam_type", getattr(self, "exam_type_override", ""))
+            if has_sub:
+                questions_info.append({
+                    "type": "parent_question",
+                    "topic": classified_topic,
+                    "subtopic": classified_subtopic,
+                    "marks": None,
+                    "question_content": question,
+                    "parent_question_structure": question_structure,
+                    "parent_description": parent_description,
+                    "sub_questions": sub_questions_list,
+                    "exam": exam,
+                    "exam_type": exam_type
+                })
             else:
-                # Basic standalone question
-                questions_info.append(
-                    {
-                        "type": "basic_question",
-                        "topic": topic,
-                        "marks": self.extract_mark(question, self.marks_pattern),
-                        "question_content": question,
-                        "parent_question_structure": None,
-                        "parent_question_description": None,
-                    }
-                )
-
-        # Add exam identifier to all questions
-        for q_info in questions_info:
-            q_info["exam"] = exam
+                marks = self.extract_mark(question, self.marks_pattern)
+                questions_info.append({
+                    "type": "basic_question",
+                    "topic": classified_topic,
+                    "subtopic": classified_subtopic,
+                    "marks": marks,
+                    "question_content": question,
+                    "parent_question_structure": None,
+                    "exam": exam,
+                    "exam_type": exam_type
+                })
 
         return questions_info
 
@@ -498,6 +560,10 @@ class DatabaseManager:
     def add_folder_database(self, folder: str, database_path: str) -> None:
         """Process all PDFs in a folder and add them to a vector database.
 
+        Detects whether the folder lives inside an ``Exam-Types/{ExamType}``
+        subtree and, when it does, passes the exam type through to ``PdfFile``
+        so it is stored in every document's metadata.
+
         Args:
             folder: Path to the folder containing PDF files.
             database_path: Path for the FAISS vector database.
@@ -505,11 +571,29 @@ class DatabaseManager:
         vdb = VectorStore(database_path)
         doc_type = os.path.basename(folder)
 
+        # Detect exam type from the folder path
+        exam_type = ""
+        norm_folder = os.path.normpath(folder)
+        parts = norm_folder.split(os.sep)
+        try:
+            et_idx = next(
+                i for i, p in enumerate(parts)
+                if p.lower() == "exam-types"
+            )
+            if et_idx + 1 < len(parts):
+                exam_type = parts[et_idx + 1]
+        except StopIteration:
+            pass
+
         for filename in os.listdir(folder):
             file_path = os.path.join(folder, filename)
             if os.path.isfile(file_path):
+                if not filename.lower().endswith(".pdf"):
+                    logger.info("Skipping non-PDF file: %s", file_path)
+                    continue
                 logger.info("Processing: %s", file_path)
                 pdf_file = PdfFile(
-                    file_path, self.subject, self.examiner, doc_type
+                    file_path, self.subject, self.examiner, doc_type,
+                    exam_type=exam_type,
                 )
                 self.store_to_database(pdf_file, vdb)

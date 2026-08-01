@@ -18,7 +18,18 @@ logger = logging.getLogger(__name__)
 
 
 def find_matching_folders(root_dir: str) -> list[str]:
-    """Find all matching folders (Specification, QuestionPapers, MarkSchemes) recursively."""
+    """Find all ingestable folders (Specification, QuestionPapers, MarkSchemes) recursively.
+
+    Walks the full directory tree under ``root_dir``, including any
+    ``Exam-Types/{ExamType}/`` subtrees, so folders such as
+    ``Exam-Types/Christianity/questionPapers`` are discovered automatically.
+
+    Args:
+        root_dir: Root directory to search (e.g. ``data/ReligiousStudies/AQA``).
+
+    Returns:
+        List of absolute/relative folder paths that match the target names.
+    """
     matching_folders = []
     target_names = {"specification", "questionpapers", "markschemes"}
     

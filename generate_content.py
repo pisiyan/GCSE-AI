@@ -7,17 +7,17 @@ by wiring together the config, LLM, similarity, generator, and marker modules.
 import logging
 import os
 import json
-from typing import Any
+from typing import Any, Optional
 
 from dotenv import load_dotenv
-from langchain.chains import RetrievalQA
+from langchain_classic.chains import RetrievalQA
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 
 from config import load_subject_config, SubjectConfig
 from llm_client import LLMClient
 from similarity import SimilarityEngine
-from exam_generator import ExamStructureBuilder, QuestionGenerator
+from exam_generator import ExamStructureBuilder, QuestionGenerator, generate_answer_lines
 from exam_marker import ExamMarker
 
 
@@ -86,8 +86,8 @@ class GcseAssistant:
             },
         )
 
-        # Single shared LLM client (replaces 3 identical instances)
-        self.llm_client = LLMClient(model="gpt-4o", temperature=0)
+        # Single shared LLM client (model and provider determined by LLMClient defaults / env)
+        self.llm_client = LLMClient()
 
         # QA chains
         self.spec_qa_chain = RetrievalQA.from_chain_type(
@@ -183,6 +183,13 @@ class GcseAssistant:
                     except json.JSONDecodeError:
                         logger.error("Failed to decode parent_question_structure: %s", q_dict["parent_question_structure"])
                 
+                # De-serialize sub_questions
+                if "sub_questions" in q_dict and isinstance(q_dict["sub_questions"], str):
+                    try:
+                        q_dict["sub_questions"] = json.loads(q_dict["sub_questions"])
+                    except json.JSONDecodeError:
+                        logger.error("Failed to decode sub_questions: %s", q_dict["sub_questions"])
+                
                 questions.append(q_dict)
 
             elif doc_type == "MarkScheme" or meta.get("doc_class") == "mark_scheme":
@@ -219,25 +226,65 @@ class GcseAssistant:
 
     # --- Convenience methods that delegate to sub-modules ---
 
+    @staticmethod
+    def get_valid_exam_types(subject: str, examiner: str) -> list[str]:
+        """Discover valid exam types for a given subject and examiner.
+
+        Scans the `data/{subject}/{examiner}/Exam-Types/` directory and returns
+        the names of all immediate subdirectories, each representing one exam type
+        (e.g. 'Higher', 'Foundation', 'Christianity').
+
+        Args:
+            subject: Subject name (e.g., "Biology").
+            examiner: Exam board name (e.g., "Edexcel").
+
+        Returns:
+            Sorted list of valid exam type names, or an empty list if the
+            Exam-Types directory does not exist.
+        """
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # Support both relative and absolute paths
+        for base in ("data", os.path.join(script_dir, "data")):
+            exam_types_dir = os.path.join(base, subject, examiner, "Exam-Types")
+            if os.path.isdir(exam_types_dir):
+                return sorted(
+                    name
+                    for name in os.listdir(exam_types_dir)
+                    if os.path.isdir(os.path.join(exam_types_dir, name))
+                )
+        logger.warning(
+            "Exam-Types directory not found for %s/%s", subject, examiner
+        )
+        return []
+
     def make_exam(
-        self, exam_topic: str, total_marks: int, topics: list[str]
+        self,
+        exam_type: str,
+        total_marks: int,
+        topics: list[str],
+        user_preferences: Optional[Any] = None,
+        num_questions: Optional[int] = None,
     ) -> dict[str, Any]:
         """Generate a complete exam.
 
         Args:
-            exam_topic: Broad exam category (e.g., "Higher").
+            exam_type: Exam type/tier (e.g., "Higher", "Christianity").
             total_marks: Total marks for the exam.
             topics: List of topic areas to cover.
+            user_preferences: Custom preferences dict/string for exam generation.
+            num_questions: Optional requested number of questions in the exam.
 
         Returns:
             Dict with exam structure and generated questions.
         """
         return self.question_generator.generate_exam(
-            exam_topic=exam_topic,
+            exam_type=exam_type,
             total_marks=total_marks,
             topics=topics,
             subject=self.subject,
             structure_builder=self.structure_builder,
+            user_preferences=user_preferences,
+            num_questions=num_questions,
         )
 
     def mark_question(self) -> str:
@@ -331,20 +378,31 @@ class GcseAssistant:
             logger.error("Failed to extract text from specification PDF %s: %s", pdf_file, e)
             return "No specification details found."
 
-def format_exam_as_markdown(subject: str, examiner: str, exam_topic: str, exam_data: dict) -> str:
+def _safe_marks_str(marks: Any) -> str:
+    """Format marks string safely, handling None or non-integer values gracefully."""
+    if marks is None:
+        return ""
+    try:
+        m = int(marks)
+        return f" *({m} mark{'s' if m > 1 else ''})*"
+    except (ValueError, TypeError):
+        return ""
+
+
+def format_exam_as_markdown(subject: str, examiner: str, exam_type: str, exam_data: dict) -> str:
     """Format a generated exam dictionary into a clean, readable markdown document.
     
     Args:
         subject: Subject name.
         examiner: Exam board name.
-        exam_topic: Exam topic.
+        exam_type: Exam type/tier (e.g., 'Higher', 'Christianity').
         exam_data: Dict with exam structure and generated questions.
         
     Returns:
         Formatted markdown string.
     """
     md = []
-    md.append(f"# GCSE {subject} ({examiner}) - {exam_topic} Exam")
+    md.append(f"# GCSE {subject} ({examiner}) - {exam_type} Exam")
     md.append("")
     
     # Calculate total marks from questions
@@ -353,61 +411,97 @@ def format_exam_as_markdown(subject: str, examiner: str, exam_topic: str, exam_d
     for topic, q_list in questions_by_topic.items():
         for q in q_list:
             if "sub_questions" in q:
-                for sq in q["sub_questions"]:
-                    if "sub_parts" in sq:
-                        for gq in sq["sub_parts"]:
-                            total_marks += gq.get("marks", 0)
-                    else:
-                        total_marks += sq.get("marks", 0)
+                if q.get("marks") is not None:
+                    total_marks += (q.get("marks") or 0)
+                else:
+                    for sq in q.get("sub_questions", []):
+                        if "sub_parts" in sq:
+                            for gq in sq.get("sub_parts", []):
+                                total_marks += (gq.get("marks") or 0)
+                        else:
+                            total_marks += (sq.get("marks") or 0)
             else:
-                total_marks += q.get("marks", 0)
+                total_marks += (q.get("marks") or 0)
                 
     md.append(f"**Total Marks:** {total_marks}")
     md.append("")
     
+    spec_trees = exam_data.get("spec_trees", {})
+    if spec_trees:
+        md.append("## Topic & Specification Breakdown")
+        md.append("")
+        for topic, tree_data in spec_trees.items():
+            if isinstance(tree_data, dict):
+                spec_code = tree_data.get("spec_code", "")
+                subtopic_names = tree_data.get("subtopics", [])
+                if not subtopic_names and "subtopics" not in tree_data:
+                    subtopic_names = [k for k in tree_data.keys() if not k.startswith("_")]
+            elif isinstance(tree_data, list):
+                spec_code = ""
+                subtopic_names = tree_data
+            else:
+                spec_code = ""
+                subtopic_names = []
+
+            code_str = f" (Specification Code: {spec_code})" if spec_code else ""
+            md.append(f"### Topic: {topic}{code_str}")
+            for st_name in subtopic_names:
+                md.append(f"- **Subtopic:** {st_name}")
+            md.append("")
+        md.append("---")
+        md.append("")
+
     for topic, q_list in questions_by_topic.items():
         md.append(f"## Topic: {topic}")
         md.append("")
         for q in q_list:
             q_num = q.get("number", "")
             subtopic = q.get("subtopic", "")
+            subtopic_str = f" (Subtopic: {subtopic})" if subtopic else ""
             
             # Check if it's a parent question with sub-parts
             if "sub_questions" in q:
                 parent_desc = q.get("parent_description", "")
-                md.append(f"### Question {q_num} (Subtopic: {subtopic})")
+                marks_str = _safe_marks_str(q.get("marks"))
+                md.append(f"### Question {q_num}{subtopic_str}{marks_str}")
                 if parent_desc:
                     md.append(parent_desc)
                     md.append("")
                 
-                for sq in q["sub_questions"]:
+                for sq in q.get("sub_questions", []):
                     label = sq.get("label", "")
-                    sq_subtopic = sq.get("subtopic", "")
-                    sq_subtopic_str = f" (Subtopic: {sq_subtopic})" if sq_subtopic else ""
                     
                     if "sub_parts" in sq:
                         context = sq.get("context", "")
-                        md.append(f"**{label}**{sq_subtopic_str} {context}")
-                        md.append("")
-                        for gq in sq["sub_parts"]:
+                        if context:
+                            md.append(f"**{label}** {context}")
+                            md.append("")
+                        else:
+                            md.append(f"**{label}**")
+                            md.append("")
+                        for gq in sq.get("sub_parts", []):
                             g_label = gq.get("label", "")
                             g_text = gq.get("text", "")
-                            g_marks = gq.get("marks", 0)
-                            g_subtopic = gq.get("subtopic", "")
-                            g_subtopic_str = f" (Subtopic: {g_subtopic})" if g_subtopic else ""
-                            md.append(f"  * **{g_label}** {g_text}{g_subtopic_str} *({g_marks} mark{'s' if g_marks > 1 else ''})*")
+                            g_marks = gq.get("marks")
+                            md.append(f"  * **{g_label}** {g_text}{_safe_marks_str(g_marks)}")
+                            md.append("")
+                            md.append(generate_answer_lines(g_marks))
                             md.append("")
                     else:
                         sq_text = sq.get("text", "")
-                        sq_marks = sq.get("marks", 0)
-                        md.append(f"* **{label}** {sq_text}{sq_subtopic_str} *({sq_marks} mark{'s' if sq_marks > 1 else ''})*")
+                        sq_marks = sq.get("marks")
+                        md.append(f"* **{label}** {sq_text}{_safe_marks_str(sq_marks)}")
+                        md.append("")
+                        md.append(generate_answer_lines(sq_marks))
                         md.append("")
             else:
                 # Standalone question
                 q_text = q.get("text", "")
-                q_marks = q.get("marks", 0)
-                md.append(f"### Question {q_num} (Subtopic: {subtopic}) *({q_marks} mark{'s' if q_marks > 1 else ''})*")
+                q_marks = q.get("marks")
+                md.append(f"### Question {q_num}{subtopic_str}{_safe_marks_str(q_marks)}")
                 md.append(q_text)
+                md.append("")
+                md.append(generate_answer_lines(q_marks))
                 md.append("")
                 
     return "\n".join(md)
