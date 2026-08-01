@@ -52,42 +52,6 @@ GCSE AI/
 └── llm_client.py               # Multi-provider LLM client wrappers
 ```
 
----
-
-## Getting Started
-
-### 1. Prerequisites
-- Python 3.10 or higher
-- An API Key for OpenAI, Google Gemini, or Anthropic
-
-### 2. Installation
-
-Clone the repository and install the dependencies:
-
-```bash
-git clone https://github.com/pisiyan/GCSE-AI.git
-cd GCSE-AI
-python -m venv venv
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-
-pip install -r requirements.txt
-```
-
-### 3. Environment Setup
-
-Create a `.env` file in the root directory:
-
-```env
-OPENAI_API_KEY=your_openai_api_key_here
-GOOGLE_API_KEY=your_google_gemini_api_key_here
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
-```
-
----
-
 ## Usage
 
 ### 1. Ingest Curriculum & Past Papers
@@ -120,14 +84,9 @@ python chatbot.py
 
 Custom configurations and Regex parsing rules are defined in [config.py](file:///c:/Users/burak/IdeaProjects/GCSE%20AI/config.py):
 
-| Subject | Exam Board | Specification Chunk Size | Mark Scheme Chunk Size |
-| :--- | :--- | :--- | :--- |
-| **Biology** | Edexcel | 2000 chars | 1700 chars |
-| **Physics** | Edexcel | 2000 chars | 1700 chars |
-| **Religious Studies** | AQA | 3000 chars | 4000 chars |
+| Subject | Exam Board |
+| :--- | :--- |
+| **Biology** | Edexcel |
+| **Physics** | Edexcel |
+| **Religious Studies** | AQA |
 
----
-
-## License
-
-This project is developed for educational and research purposes. All GCSE specifications and past paper rights belong to their respective exam boards (Edexcel / Pearson, AQA).
