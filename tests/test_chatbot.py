@@ -108,6 +108,107 @@ class TestChatbot(unittest.TestCase):
         mock_followup.assert_called_once()
         self.mock_assistant.exam_marker.mark_answer.assert_not_called()
 
+    @patch('chatbot.ChatbotAgent.run_agent_loop_followup')
+    def test_single_item_actions(self, mock_followup):
+        # 1. Single question generation
+        self.mock_assistant.generate_single_question.return_value = {
+            "number": "1)", "text": "Explain photosynthesis.", "marks": 4, "subtopic": "Plants"
+        }
+        self.mock_assistant.llm_client.invoke_json.return_value = {
+            "thought": "Generate single question",
+            "action": "generate_single_question",
+            "params": {"topic": "Photosynthesis", "marks": 4}
+        }
+        self.agent.run_agent_loop("Give me a 4 mark question on photosynthesis")
+        self.mock_assistant.generate_single_question.assert_called_once()
+        self.assertEqual(self.agent.history[-1]["role"], "system")
+        self.assertIn("Single question generated", self.agent.history[-1]["content"])
+
+        # 3. Mark scheme generation
+        self.mock_assistant.generate_mark_scheme.return_value = "1 mark for light, 1 mark for chlorophyll"
+        self.mock_assistant.llm_client.invoke_json.return_value = {
+            "thought": "Generate mark scheme",
+            "action": "generate_mark_scheme",
+            "params": {"topic": "Photosynthesis", "question": "Explain photosynthesis", "marks": 4}
+        }
+        self.agent.run_agent_loop("Give me the mark scheme")
+        self.mock_assistant.generate_mark_scheme.assert_called_once()
+
+        # 4. Model answer generation
+        self.mock_assistant.generate_model_answer.return_value = "Light intensity increases the rate of photosynthesis..."
+        self.mock_assistant.llm_client.invoke_json.return_value = {
+            "thought": "Generate model answer",
+            "action": "generate_model_answer",
+            "params": {"question": "Explain photosynthesis", "marks": 4}
+        }
+        self.agent.run_agent_loop("Write a model answer")
+        self.mock_assistant.generate_model_answer.assert_called_once()
+
+        # 6. Spec breakdown
+        self.mock_assistant.get_spec_breakdown.return_value = {
+            "topic": "Photosynthesis", "spec_code": "4.1.2", "subtopics": ["Light intensity", "Chlorophyll"]
+        }
+        self.mock_assistant.llm_client.invoke_json.return_value = {
+            "thought": "Get spec breakdown",
+            "action": "get_spec_breakdown",
+            "params": {"topic": "Photosynthesis"}
+        }
+        self.agent.run_agent_loop("Show spec codes")
+        self.mock_assistant.get_spec_breakdown.assert_called_once()
+
+        # 8. Command word explanation
+        self.mock_assistant.explain_command_word.return_value = "Explain requires giving reasons..."
+        self.mock_assistant.llm_client.invoke_json.return_value = {
+            "thought": "Explain command word",
+            "action": "explain_command_word",
+            "params": {"command_word": "Explain"}
+        }
+        self.agent.run_agent_loop("Explain the command word Explain")
+        self.mock_assistant.explain_command_word.assert_called_once()
+
+    @patch('chatbot.ChatbotAgent.run_agent_loop_followup')
+    def test_multi_action_complex_query(self, mock_followup):
+        self.mock_assistant.generate_single_question.return_value = {
+            "number": "1)", "text": "Describe Newton's laws.", "marks": 4
+        }
+        self.mock_assistant.generate_mark_scheme.return_value = "1 mark per law"
+        self.mock_assistant.get_spec_breakdown.return_value = {"topic": "Forces", "spec_code": "P2.1", "subtopics": ["Newton"]}
+
+        self.mock_assistant.llm_client.invoke_json.return_value = {
+            "thought": "Complex query combining question, mark scheme, and spec breakdown",
+            "action": "generate_single_question",
+            "actions": [
+                {"action": "generate_single_question", "params": {"topic": "Forces", "marks": 4}},
+                {"action": "generate_mark_scheme", "params": {"topic": "Forces", "marks": 4}},
+                {"action": "get_spec_breakdown", "params": {"topic": "Forces"}}
+            ]
+        }
+
+        self.agent.run_agent_loop("Give me a question, its mark scheme, and the spec code for Forces")
+        self.mock_assistant.generate_single_question.assert_called_once()
+        self.mock_assistant.generate_mark_scheme.assert_called_once()
+        self.mock_assistant.get_spec_breakdown.assert_called_once()
+        mock_followup.assert_called_once()
+
+    @patch('chatbot.ChatbotAgent.run_agent_loop_followup')
+    def test_exam_generation_isolation(self, mock_followup):
+        self.agent.valid_exam_types = ["Higher"]
+        self.mock_assistant.llm_client.invoke_json.return_value = {
+            "thought": "Generate exam request with stray secondary actions",
+            "action": "generate_exam",
+            "actions": [
+                {"action": "generate_exam", "params": {"exam_type": "Higher", "total_marks": 20, "topics": ["Motion"]}},
+                {"action": "generate_single_question", "params": {"topic": "Motion"}}
+            ],
+            "params": {"exam_type": "Higher", "total_marks": 20, "topics": ["Motion"]}
+        }
+        self.mock_assistant.make_exam.return_value = {"questions": {}, "spec_trees": {}}
+
+        self.agent.run_agent_loop("Generate a higher exam for 20 marks on Motion")
+        self.mock_assistant.make_exam.assert_called_once()
+        self.mock_assistant.generate_single_question.assert_not_called()
+
 
 if __name__ == '__main__':
     unittest.main()
+

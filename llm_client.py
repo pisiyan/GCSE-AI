@@ -18,6 +18,9 @@ from langchain_classic.chains import RetrievalQA
 logger = logging.getLogger(__name__)
 
 
+from token_cost_tracker import global_tracker
+
+
 class LLMClient:
     """Unified LLM client wrapper supporting multiple backend model providers.
 
@@ -116,9 +119,10 @@ class LLMClient:
 
         for attempt in range(1, self.max_retries + 1):
             try:
-                result = llm.invoke(prompt).content
+                response = llm.invoke(prompt)
+                global_tracker.track_call(self.model, prompt, response)
                 logger.debug("LLM invoke succeeded (attempt %d)", attempt)
-                return str(result)
+                return str(response.content)
             except Exception as e:
                 logger.warning(
                     "LLM invoke failed (attempt %d/%d): %s: %s",
@@ -145,9 +149,10 @@ class LLMClient:
         )
         for attempt in range(1, self.max_retries + 1):
             try:
-                result = self.llm.invoke([msg]).content
+                response = self.llm.invoke([msg])
+                global_tracker.track_call(self.model, prompt, response)
                 logger.debug("Image LLM invoke succeeded (attempt %d)", attempt)
-                return str(result)
+                return str(response.content)
             except Exception as e:
                 logger.warning(
                     "Image LLM invoke failed (attempt %d/%d): %s: %s",
@@ -165,9 +170,11 @@ class LLMClient:
         """Invoke a QA chain with retry logic."""
         for attempt in range(1, self.max_retries + 1):
             try:
-                result = qa_chain.invoke({"query": query})["result"]
+                res_dict = qa_chain.invoke({"query": query})
+                result = str(res_dict["result"])
+                global_tracker.track_call(self.model, query, result)
                 logger.debug("QA chain invoke succeeded (attempt %d)", attempt)
-                return str(result)
+                return result
             except Exception as e:
                 logger.warning(
                     "QA chain invoke failed (attempt %d/%d): %s: %s",
@@ -191,7 +198,15 @@ class LLMClient:
             try:
                 raw = self.invoke(prompt, temperature=temperature)
                 cleaned = self._strip_code_fences(raw)
-                return json.loads(cleaned)
+                try:
+                    return json.loads(cleaned)
+                except json.JSONDecodeError:
+                    # Attempt regex extraction for outermost JSON object or array
+                    import re
+                    match = re.search(r"(\{.*\}|\[.*\])", cleaned, re.DOTALL)
+                    if match:
+                        return json.loads(match.group(1))
+                    raise
             except json.JSONDecodeError as e:
                 logger.warning(
                     "JSON parse failed (attempt %d/%d): %s. Raw: %.200s",

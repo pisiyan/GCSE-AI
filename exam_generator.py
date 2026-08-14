@@ -5,6 +5,7 @@ and QuestionGenerator for generating individual questions and full exams.
 """
 
 import logging
+import os
 import random
 import re
 import json
@@ -240,59 +241,202 @@ class ExamStructureBuilder:
 
         return sorted(list(options), key=lambda x: (x[0], x[1]))
 
-    def get_past_exam_structures(self, topic: str) -> list[list[list]]:
-        """Extract mark structures from past exams for a given topic.
+    def get_past_exam_structures(self, topic: Optional[str] = None) -> list[list[list]]:
+        """Extract mark structures from past exams.
 
         Args:
-            topic: The exam topic to filter questions by.
+            topic: Optional exam topic / exam_type / subject to filter questions by.
 
         Returns:
             A list of exams, where each exam is a list of [marks, type] pairs.
         """
-        current_exam = ""
-        exam_marks: list[list] = []
-        all_exams: list[list[list]] = []
+        def _extract(filtered_qs: list[dict]) -> list[list[list]]:
+            current_exam = ""
+            exam_marks: list[list] = []
+            all_exams: list[list[list]] = []
 
-        for question in self.questions:
-            is_relevant = (
-                question["topic"] == topic
-                and question["type"] in ("parent_question", "basic_question")
-            )
-            if not is_relevant:
-                continue
-
-            if question["exam"] != current_exam:
-                if exam_marks:
-                    all_exams.append(exam_marks)
-                exam_marks = []
-                current_exam = question["exam"]
-
-            if question["type"] == "parent_question":
-                pqs = question.get("parent_question_structure")
-                if pqs is None:
+            for question in filtered_qs:
+                q_t = question.get("type", "")
+                if q_t not in ("parent_question", "basic_question"):
                     continue
-                marks = [self.flatten_marks(pqs), "parent"]
-            else:
-                q_marks = question.get("marks")
-                if q_marks is None:
-                    continue
-                marks = [q_marks, "basic"]
-            exam_marks.append(marks)
 
-        if exam_marks:
-            all_exams.append(exam_marks)
+                q_exam = question.get("exam") or question.get("exam_id") or "default_exam"
+                if q_exam != current_exam:
+                    if exam_marks:
+                        all_exams.append(exam_marks)
+                    exam_marks = []
+                    current_exam = q_exam
 
-        return all_exams
+                if q_t == "parent_question":
+                    pqs = question.get("parent_question_structure")
+                    if pqs is None:
+                        continue
+                    marks = [self.flatten_marks(pqs), "parent"]
+                else:
+                    q_marks = question.get("marks")
+                    if q_marks is None:
+                        continue
+                    marks = [q_marks, "basic"]
+                exam_marks.append(marks)
+
+            if exam_marks:
+                all_exams.append(exam_marks)
+
+            return all_exams
+
+        if topic:
+            topic_clean = str(topic).strip().lower()
+            relevant = [
+                q for q in self.questions
+                if str(q.get("topic", "")).strip().lower() == topic_clean
+                or str(q.get("exam_type", "")).strip().lower() == topic_clean
+                or str(q.get("subject", "")).strip().lower() == topic_clean
+            ]
+            res = _extract(relevant)
+            if res:
+                return res
+
+        return _extract(self.questions)
+
+    def get_position_options(self, topic: Optional[str] = None) -> dict[int, set[tuple[int, str]]]:
+        """Extract valid question mark/type options per position index (0-indexed) from past exam structures."""
+        past_structures = self.get_past_exam_structures(topic)
+        pos_options: dict[int, set[tuple[int, str]]] = {}
+        for struct in past_structures:
+            for idx, (m, t) in enumerate(struct):
+                if idx not in pos_options:
+                    pos_options[idx] = set()
+                pos_options[idx].add((m, t))
+        return pos_options
+
+    def extract_block_patterns(self, past_structures: list[list[list]]) -> list[list[list]]:
+        """Extract repeating section/block patterns from past paper structures."""
+        if not past_structures:
+            return []
+
+        counts: dict[tuple, int] = {}
+        for struct in past_structures:
+            n = len(struct)
+            for k in range(2, min(n + 1, 11)):
+                for start in range(0, n - k + 1):
+                    sub = tuple((m, t) for m, t in struct[start : start + k])
+                    counts[sub] = counts.get(sub, 0) + 1
+
+        if not counts:
+            return []
+
+        sorted_blocks = sorted(
+            counts.keys(),
+            key=lambda b: (len(b), counts[b], sum(x[0] for x in b)),
+            reverse=True,
+        )
+        return [[list(item) for item in b] for b in sorted_blocks]
+
+    def _find_candidate_combinations(
+        self,
+        total_marks: int,
+        valid_options: list[tuple[int, str]],
+        target_num_questions: Optional[int] = None,
+        limit: int = 50,
+    ) -> list[list[list]]:
+        """Find multiple valid candidate sequences of [marks, type] that sum to total_marks."""
+        if total_marks <= 0 or not valid_options:
+            return []
+
+        options = list(valid_options)
+        min_m = min(o[0] for o in options)
+        max_m = max(o[0] for o in options)
+
+        results = []
+
+        def dfs(remaining: int, current_path: list, depth: int):
+            if len(results) >= limit:
+                return
+            if remaining == 0:
+                if target_num_questions is None or len(current_path) == target_num_questions:
+                    results.append(current_path)
+                return
+            if depth > 60:
+                return
+
+            curr_len = len(current_path)
+            if target_num_questions is not None:
+                if curr_len >= target_num_questions:
+                    return
+                rem_qs = target_num_questions - curr_len
+                if remaining < rem_qs * min_m or remaining > rem_qs * max_m:
+                    return
+
+            fitting = [opt for opt in options if opt[0] <= remaining]
+            if not fitting:
+                return
+
+            for m, t in fitting:
+                dfs(remaining - m, current_path + [[m, t]], depth + 1)
+                if len(results) >= limit:
+                    break
+
+        dfs(total_marks, [], 0)
+        return results
+
+    def _score_and_select_candidate(
+        self,
+        candidates: list[list[list]],
+        past_structures: list[list[list]],
+    ) -> Optional[list[list]]:
+        """Score candidate structures against past paper patterns and return the highest-scoring candidate."""
+        if not candidates:
+            return None
+        if len(candidates) == 1:
+            return candidates[0]
+
+        transitions: set[tuple[tuple[int, str], tuple[int, str]]] = set()
+        pos_counts: dict[int, dict[tuple[int, str], int]] = {}
+
+        for struct in past_structures:
+            for idx, (m, t) in enumerate(struct):
+                item = (m, t)
+                if idx not in pos_counts:
+                    pos_counts[idx] = {}
+                pos_counts[idx][item] = pos_counts[idx].get(item, 0) + 1
+
+                if idx < len(struct) - 1:
+                    next_item = (struct[idx + 1][0], struct[idx + 1][1])
+                    transitions.add((item, next_item))
+
+        best_score = -1.0
+        best_candidate = candidates[0]
+
+        for cand in candidates:
+            score = 0.0
+            n = len(cand)
+            for i in range(n - 1):
+                t_pair = ((cand[i][0], cand[i][1]), (cand[i + 1][0], cand[i + 1][1]))
+                if t_pair in transitions:
+                    score += 2.0
+
+            for i in range(n):
+                item = (cand[i][0], cand[i][1])
+                if i in pos_counts and item in pos_counts[i]:
+                    score += 1.0 + pos_counts[i][item]
+
+            if score > best_score:
+                best_score = score
+                best_candidate = cand
+
+        return best_candidate
 
     def _find_valid_combination(
         self,
         total_marks: int,
         valid_options: list[tuple[int, str]],
         target_num_questions: Optional[int] = None,
+        position_options: Optional[dict[int, set[tuple[int, str]]]] = None,
     ) -> Optional[list[list]]:
         """Find a valid sequence of [marks, type] from valid_options that sum exactly to total_marks.
 
         If target_num_questions is specified, only combinations with that exact question count are returned.
+        If position_options is specified, options at step i are restricted to valid (marks, type) at position i.
         """
         if total_marks <= 0 or not valid_options:
             return None
@@ -317,7 +461,14 @@ class ExamStructureBuilder:
                 if remaining < rem_qs * min_m or remaining > rem_qs * max_m:
                     return None
 
-            fitting = [opt for opt in options if opt[0] <= remaining]
+            available = options
+            if position_options and curr_len in position_options and position_options[curr_len]:
+                pos_allowed = position_options[curr_len]
+                pos_filtered = [opt for opt in options if opt in pos_allowed]
+                if pos_filtered:
+                    available = pos_filtered
+
+            fitting = [opt for opt in available if opt[0] <= remaining]
             if not fitting:
                 return None
 
@@ -336,17 +487,16 @@ class ExamStructureBuilder:
         topic: str,
         num_questions: Optional[int] = None,
     ) -> list:
-        """Build an exam structure that totals the given marks using ONLY recorded valid question marks.
+        """Build an exam structure using past paper pattern matching and 3-tiered fallback.
 
         Args:
             total_marks: Target total marks for the exam.
-            topic: The exam topic.
+            topic: The exam topic or exam_type.
             num_questions: Optional requested number of questions in the exam.
 
         Returns:
             A list of mark structures [marks, question_type] for each question.
         """
-        # 1. Parse all questions at highest level to record what marked questions are available
         valid_options = self.get_valid_question_options(topic)
         if not valid_options:
             valid_options = self.get_valid_question_options(None)
@@ -356,24 +506,77 @@ class ExamStructureBuilder:
 
         logger.info("Recorded %d valid question mark options: %s", len(valid_options), valid_options)
 
-        # 2. If explicit num_questions requested, try to generate a combination with exactly num_questions
-        if num_questions is not None and isinstance(num_questions, int) and num_questions > 0:
-            logger.info("Attempting to build structure with requested %d questions for %d marks...", num_questions, total_marks)
-            comb = self._find_valid_combination(total_marks, valid_options, target_num_questions=num_questions)
-            if comb is not None and sum(x[0] for x in comb) == total_marks and len(comb) == num_questions:
-                logger.info("Successfully built structure with requested %d questions: %s", num_questions, comb)
-                return comb
-            else:
-                logger.warning(
-                    "Impossible to generate an exam with exactly %d questions for %d marks using available question options. "
-                    "Falling back to automatic question count selection.",
-                    num_questions, total_marks
-                )
-
-        # 3. Check if a past exam structure sums to exact total_marks using ONLY valid options
         past_structures = self.get_past_exam_structures(topic)
+        require_position_matching = bool(getattr(self.config, "question_no_importance", False))
+        position_options = self.get_position_options(topic) if require_position_matching else None
+
+        # TIER 1: High-Confidence Exact / Scaled Block Tiling
         if past_structures:
-            for exam_struct in past_structures:
+            blocks = self.extract_block_patterns(past_structures)
+            for struct in past_structures:
+                if struct and struct not in blocks:
+                    blocks.append(struct)
+
+            for block in blocks:
+                b_marks = sum(x[0] for x in block)
+                b_len = len(block)
+                if b_marks <= 0 or b_len == 0:
+                    continue
+
+                if not all((m, t) in valid_options for m, t in block):
+                    continue
+
+                if num_questions is not None and isinstance(num_questions, int) and num_questions > 0:
+                    if num_questions % b_len == 0:
+                        multiplier = num_questions // b_len
+                        if multiplier * b_marks == total_marks:
+                            tiled = block * multiplier
+                            logger.info("Tier 1: Matched block pattern tiling (%d questions, %d marks): %s", num_questions, total_marks, tiled)
+                            return tiled
+                else:
+                    if total_marks % b_marks == 0:
+                        multiplier = total_marks // b_marks
+                        tiled = block * multiplier
+                        logger.info("Tier 1: Matched block pattern tiling (%d marks): %s", total_marks, tiled)
+                        return tiled
+
+        # TIER 2: Pattern-Scored Candidate Selection
+        if past_structures:
+            candidates = self._find_candidate_combinations(
+                total_marks, valid_options, target_num_questions=num_questions, limit=50
+            )
+            if candidates:
+                best_cand = self._score_and_select_candidate(candidates, past_structures)
+                if best_cand:
+                    logger.info("Tier 2: Selected pattern-scored structure: %s", best_cand)
+                    return best_cand
+
+        # TIER 3: Unconstrained Fallback (Pattern-Agnostic Safety)
+        if num_questions is not None and isinstance(num_questions, int) and num_questions > 0:
+            logger.info("Attempting Tier 3 fallback with requested %d questions for %d marks...", num_questions, total_marks)
+            comb = self._find_valid_combination(
+                total_marks, valid_options, target_num_questions=num_questions, position_options=position_options
+            )
+            if comb is not None and sum(x[0] for x in comb) == total_marks and len(comb) == num_questions:
+                logger.info("Tier 3: Built structure with requested %d questions: %s", num_questions, comb)
+                return comb
+            elif position_options:
+                comb = self._find_valid_combination(
+                    total_marks, valid_options, target_num_questions=num_questions
+                )
+                if comb is not None and sum(x[0] for x in comb) == total_marks and len(comb) == num_questions:
+                    logger.info("Tier 3: Built structure with requested %d questions (position constraint relaxed): %s", num_questions, comb)
+                    return comb
+
+            logger.warning(
+                "Impossible to generate an exam with exactly %d questions for %d marks using available question options. "
+                "Falling back to automatic question count selection.",
+                num_questions, total_marks
+            )
+
+        past_exam_exact = past_structures
+        if past_exam_exact:
+            for exam_struct in past_exam_exact:
                 current_sum = 0
                 candidate_struct = []
                 for q_m, q_t in exam_struct:
@@ -381,16 +584,27 @@ class ExamStructureBuilder:
                         candidate_struct.append([q_m, q_t])
                         current_sum += q_m
                         if current_sum == total_marks:
-                            logger.info("Found past exam pattern matching exact %d marks", total_marks)
+                            logger.info("Tier 3: Found past exam pattern matching exact %d marks", total_marks)
                             return candidate_struct
 
-        # 4. Generate a combination automatically using ONLY valid question mark options that sum to total_marks
         max_retries = getattr(self.config, "max_structure_retries", MAX_STRUCTURE_RETRIES)
         for retry in range(max_retries):
-            comb = self._find_valid_combination(total_marks, valid_options, target_num_questions=None)
+            comb = self._find_valid_combination(
+                total_marks, valid_options, target_num_questions=None, position_options=position_options
+            )
             if comb is not None and sum(x[0] for x in comb) == total_marks:
-                logger.info("Exam structure built automatically on attempt %d: %s", retry + 1, comb)
+                logger.info("Tier 3: Structure built automatically on attempt %d (position-matched=%s): %s", retry + 1, bool(position_options), comb)
                 return comb
+
+        if position_options:
+            logger.warning("Position-matched structure building failed. Falling back to non-position matched generation.")
+            for retry in range(max_retries):
+                comb = self._find_valid_combination(
+                    total_marks, valid_options, target_num_questions=None
+                )
+                if comb is not None and sum(x[0] for x in comb) == total_marks:
+                    logger.info("Tier 3: Structure built automatically on attempt %d (fallback): %s", retry + 1, comb)
+                    return comb
 
         raise RuntimeError(
             f"Could not build valid exam structure using available question marks after {max_retries} attempts "
@@ -642,12 +856,55 @@ class QuestionGenerator:
         self.spec_trees_cache: Dict[str, dict] = {}
 
     def _get_spec_tree_cached(self, topic: str, exam_type: str) -> dict:
-        """Fetch specification chunks and compile them into a structured tree using a single LLM call."""
+        """Fetch specification tree by looking up specification_summary.json or falling back to LLM parsing."""
         cache_key = f"{exam_type}-{topic}"
         if cache_key in self.spec_trees_cache:
             return self.spec_trees_cache[cache_key]
 
-        logger.info("Extracting and compiling specification hierarchy for: %s", cache_key)
+        # Fast lookup from specification_summary.json
+        subject = getattr(self.config, "subject", "")
+        examiner = getattr(self.config, "examiner", "")
+        if subject and examiner:
+            sum_path = f"data/{subject}/{examiner}/{subject}-{examiner}-specification_summary.json"
+            if os.path.exists(sum_path):
+                try:
+                    with open(sum_path, "r", encoding="utf-8") as f:
+                        summary_data = json.load(f)
+
+                    et_target = exam_type.strip().lower() if exam_type else ""
+                    et_items = summary_data.get("exam_types", [])
+                    matched_et = None
+                    for item in et_items:
+                        if et_target and et_target in str(item.get("exam_type", "")).strip().lower():
+                            matched_et = item
+                            break
+                    if not matched_et and et_items:
+                        matched_et = et_items[0]
+
+                    if matched_et:
+                        topic_target = topic.strip().lower()
+                        for t_item in matched_et.get("topics", []):
+                            t_name = str(t_item.get("topic", "")).strip()
+                            if topic_target in t_name.lower() or t_name.lower() in topic_target:
+                                spec_code = t_item.get("spec_code", topic)
+                                raw_subs = t_item.get("subtopics", [topic])
+                                subtopics = []
+                                for s in raw_subs:
+                                    if isinstance(s, str):
+                                        subtopics.append(s.strip())
+                                    elif isinstance(s, dict) and s.get("name"):
+                                        subtopics.append(str(s.get("name")).strip())
+                                if not subtopics:
+                                    subtopics = [topic]
+
+                                tree = {"spec_code": spec_code, "subtopics": subtopics}
+                                self.spec_trees_cache[cache_key] = tree
+                                logger.info("Found specification summary lookup for %s: %s (%d subtopics)", cache_key, spec_code, len(subtopics))
+                                return tree
+                except Exception as e:
+                    logger.warning("Failed summary lookup for %s: %s", cache_key, e)
+
+        logger.info("Extracting and compiling specification hierarchy via LLM for: %s", cache_key)
 
         if self.specification_text:
             spec_content = self.specification_text
@@ -715,15 +972,36 @@ Do not return any explanations or markdown wrapper, return only raw JSON."""
         self.spec_trees_cache[cache_key] = tree
         return tree
 
-    def _find_most_similar_question(self, query: str, candidate_qs: list[dict]) -> dict:
+    def _find_most_similar_question(self, query: str, candidate_qs: list[dict]) -> tuple[Optional[dict], float]:
+        """Find candidate question matching desired subtopic using vector similarity.
+
+        Compares strictly the subtopic titles (query vs candidate subtopic title).
+        Selects a random candidate from any candidates with similarity >= threshold (default 70%).
+        If no candidate meets the threshold, selects a random candidate from all available candidates.
+
+        Returns:
+            Tuple of (chosen_candidate_dict, similarity_score).
+        """
         if not candidate_qs:
-            return None
+            return None, 0.0
         if len(candidate_qs) == 1:
-            return candidate_qs[0]
+            q = candidate_qs[0]
+            sub_meta = (q.get("subtopic") or q.get("topic") or "").strip()
+            text = sub_meta if sub_meta else "General"
+            embeddings = self.local_similarity.get_embeddings([query, text])
+            q_emb = np.array(embeddings[0])
+            c_emb = np.array(embeddings[1])
+            q_norm = np.linalg.norm(q_emb) or 1.0
+            c_norm = np.linalg.norm(c_emb) or 1.0
+            sim = float(c_emb @ q_emb / (c_norm * q_norm))
+            return q, max(0.0, sim)
+
+        threshold = float(getattr(self.config, "similarity_threshold", 0.70))
 
         texts = []
         for q in candidate_qs:
-            text = q.get("question_content") or q.get("parent_question_description") or q.get("topic") or ""
+            sub_meta = (q.get("subtopic") or q.get("topic") or "").strip()
+            text = sub_meta if sub_meta else "General"
             texts.append(text)
 
         all_texts = [query] + texts
@@ -738,8 +1016,15 @@ Do not return any explanations or markdown wrapper, return only raw JSON."""
         q_norm = 1.0 if q_norm == 0 else q_norm
 
         similarities = c_embs @ q_emb / (norms * q_norm)
-        best_idx = int(np.argmax(similarities))
-        return candidate_qs[best_idx]
+        above_threshold_indices = [idx for idx, sim in enumerate(similarities) if sim >= threshold]
+
+        if above_threshold_indices:
+            chosen_idx = int(random.choice(above_threshold_indices))
+        else:
+            chosen_idx = int(np.argmax(similarities))
+
+        chosen_sim = float(similarities[chosen_idx])
+        return candidate_qs[chosen_idx], max(0.0, chosen_sim)
 
     def _clean_and_format_sub_questions(self, sub_questions: list[dict]) -> list[dict]:
         """Clean redundant text from sub-questions and format nicely."""
@@ -754,6 +1039,8 @@ Do not return any explanations or markdown wrapper, return only raw JSON."""
                 item["text"] = clean_question_text(sq["text"])
             if "marks" in sq:
                 item["marks"] = sq["marks"]
+            if "subtopic" in sq:
+                item["subtopic"] = sq["subtopic"]
             if "sub_parts" in sq:
                 gqs = []
                 for gq in sq["sub_parts"]:
@@ -808,19 +1095,11 @@ Do not return any explanations or markdown wrapper, return only raw JSON."""
             if not candidates:
                 candidates = list(self.questions)
 
-            # Prefer exact subtopic and topic metadata matches if present
-            sub_matches = [q for q in candidates if q.get("subtopic") and q.get("subtopic").lower() == subtopic.lower()]
-            if sub_matches:
-                candidates = sub_matches
-            else:
-                top_matches = [q for q in candidates if q.get("topic") and task.get("topic") and q.get("topic").lower() == task.get("topic").lower()]
-                if top_matches:
-                    candidates = top_matches
-
-            q_best = self._find_most_similar_question(subtopic, candidates)
+            q_best, sim_score = self._find_most_similar_question(subtopic, candidates)
             parent_desc = clean_question_text(q_best.get("parent_description", "") or q_best.get("question_content", ""))
+            matched_subtopic = q_best.get("subtopic", subtopic) if q_best else subtopic
             
-            orig_sub_qs = q_best.get("sub_questions", [])
+            orig_sub_qs = q_best.get("sub_questions", []) if q_best else []
             cleaned_sub_qs = self._clean_and_format_sub_questions(orig_sub_qs)
 
             return {
@@ -828,6 +1107,8 @@ Do not return any explanations or markdown wrapper, return only raw JSON."""
                 "parent_description": parent_desc,
                 "sub_questions": cleaned_sub_qs,
                 "subtopic": subtopic,
+                "matched_subtopic": matched_subtopic,
+                "similarity_score": round(sim_score, 4),
                 "subtopic_data": task.get("subtopic_data", {}),
                 "marks": target_marks,
                 "q_num": q_num
@@ -855,26 +1136,204 @@ Do not return any explanations or markdown wrapper, return only raw JSON."""
             if not candidates:
                 candidates = list(self.questions)
 
-            # Prefer exact subtopic and topic metadata matches if present
-            sub_matches = [q for q in candidates if q.get("subtopic") and q.get("subtopic").lower() == subtopic.lower()]
-            if sub_matches:
-                candidates = sub_matches
-            else:
-                top_matches = [q for q in candidates if q.get("topic") and task.get("topic") and q.get("topic").lower() == task.get("topic").lower()]
-                if top_matches:
-                    candidates = top_matches
-
-            q_best = self._find_most_similar_question(subtopic, candidates)
-            question_text = clean_question_text(q_best.get("question_content") or q_best.get("text") or "")
+            q_best, sim_score = self._find_most_similar_question(subtopic, candidates)
+            question_text = clean_question_text(q_best.get("question_content") or q_best.get("text") or "") if q_best else ""
+            matched_subtopic = q_best.get("subtopic", subtopic) if q_best else subtopic
 
             return {
                 "number": f"{q_num})",
                 "text": question_text,
                 "marks": target_marks,
                 "subtopic": subtopic,
+                "matched_subtopic": matched_subtopic,
+                "similarity_score": round(sim_score, 4),
                 "subtopic_data": task.get("subtopic_data", {}),
                 "q_num": q_num
             }
+
+    def generate_exam(
+        self,
+        exam_type: str,
+        total_marks: int,
+        topics: list[str],
+        subject: str,
+        structure_builder: ExamStructureBuilder,
+        user_preferences: Optional[Any] = None,
+        num_questions: Optional[int] = None,
+    ) -> dict[str, Any]:
+        """Generate a complete exam using parallel generation.
+
+        Args:
+            exam_type: The exam type/tier (e.g., "Higher", "Christianity").
+            total_marks: Total marks for the exam.
+            topics: List of topic areas to cover.
+            subject: The subject name.
+            structure_builder: An ExamStructureBuilder instance.
+            user_preferences: Optional custom preferences.
+            num_questions: Optional requested number of questions in the exam.
+
+        Returns:
+            Dict containing the exam structure, specification trees, and generated questions.
+        """
+        raw_structure = structure_builder.build_structure(total_marks, exam_type, num_questions=num_questions)
+        exam_structure = structure_builder.distribute_to_topics(raw_structure, topics)
+    def _optimize_topic_subtopic_assignments(
+        self,
+        exam_structure: dict[str, list],
+        exam_type: str,
+        spec_trees: dict[str, Any]
+    ) -> dict[str, list[str]]:
+        """Optimize subtopic assignments for each topic's question slots.
+
+        Ensures question slots are assigned subtopics that have candidate questions
+        matching >= 50% subtopic similarity whenever possible.
+        If no candidate meets 50% similarity for a slot, assigns the subtopic
+        with the highest achievable similarity.
+        """
+        def _get_subtopics(tree_obj: Any) -> list[str]:
+            if isinstance(tree_obj, dict):
+                if "subtopics" in tree_obj and isinstance(tree_obj["subtopics"], list):
+                    return [s for s in tree_obj["subtopics"] if isinstance(s, str)]
+                return [k for k in tree_obj.keys() if not k.startswith("_")]
+            elif isinstance(tree_obj, list):
+                return [s for s in tree_obj if isinstance(s, str)]
+            return []
+
+        min_threshold = float(getattr(self.config, "min_subtopic_similarity", 0.50))
+        soft_threshold = float(getattr(self.config, "min_soft_subtopic_similarity", 0.35))
+        diversity_weight = float(getattr(self.config, "subtopic_diversity_weight", 500.0))
+        pool = _filter_by_exam_type(self.questions, exam_type)
+        assigned_subtopics_by_topic: dict[str, list[str]] = {}
+
+        for topic, mark_infos in exam_structure.items():
+            spec_tree = spec_trees.get(topic, {})
+            subtopics_pool = _get_subtopics(spec_tree)
+            if not subtopics_pool:
+                subtopics_pool = [topic]
+
+            n_slots = len(mark_infos)
+            n_subtopics = len(subtopics_pool)
+
+            max_sim = np.zeros((n_slots, n_subtopics), dtype=float)
+
+            subtopic_embs = np.array(self.local_similarity.get_embeddings(subtopics_pool))
+            subtopic_norms = np.linalg.norm(subtopic_embs, axis=1)
+            subtopic_norms = np.where(subtopic_norms == 0, 1.0, subtopic_norms)
+
+            norm_sub_embs = subtopic_embs / subtopic_norms[:, None]
+            subtopic_inter_sim = norm_sub_embs @ norm_sub_embs.T
+
+            for i, mark_info in enumerate(mark_infos):
+                if isinstance(mark_info, list) and len(mark_info) == 2 and isinstance(mark_info[1], str):
+                    target_marks, q_type = mark_info[0], mark_info[1]
+                elif isinstance(mark_info, int):
+                    target_marks, q_type = mark_info, "basic"
+                else:
+                    target_marks = ExamStructureBuilder.flatten_marks(mark_info)
+                    q_type = "parent" if isinstance(mark_info, list) else "basic"
+
+                if q_type == "parent":
+                    candidates = [
+                        q for q in pool
+                        if (q.get("type") == "parent_question" or q.get("parent_question_structure") or q.get("sub_questions"))
+                        and ExamStructureBuilder.flatten_marks(q.get("parent_question_structure")) == target_marks
+                    ]
+                    if not candidates:
+                        candidates = [
+                            q for q in pool
+                            if q.get("type") == "parent_question" or q.get("parent_question_structure") or q.get("sub_questions")
+                        ]
+                else:
+                    candidates = [
+                        q for q in pool
+                        if (q.get("type") == "basic_question" and not q.get("parent_question_structure") and not q.get("sub_questions"))
+                        and q.get("marks") == target_marks
+                    ]
+                    if not candidates:
+                        candidates = [
+                            q for q in pool
+                            if q.get("type") == "basic_question" and not q.get("parent_question_structure") and not q.get("sub_questions")
+                        ]
+                if not candidates:
+                    candidates = list(pool) or list(self.questions)
+
+                cand_texts = [
+                    (q.get("subtopic") or q.get("topic") or "").strip() or "General"
+                    for q in candidates
+                ]
+                cand_embs = np.array(self.local_similarity.get_embeddings(cand_texts))
+                cand_norms = np.linalg.norm(cand_embs, axis=1)
+                cand_norms = np.where(cand_norms == 0, 1.0, cand_norms)
+
+                sim_matrix = (cand_embs @ subtopic_embs.T) / (cand_norms[:, None] * subtopic_norms[None, :])
+                sim_matrix = np.maximum(0.0, sim_matrix)
+
+                max_sim[i] = np.max(sim_matrix, axis=0)
+
+            def _eval_score(assign: list[int]) -> float:
+                above_cnt = sum(1 for idx, j_idx in enumerate(assign) if max_sim[idx][j_idx] >= min_threshold)
+                soft_above_cnt = sum(1 for idx, j_idx in enumerate(assign) if max_sim[idx][j_idx] >= soft_threshold)
+                unique_cnt = len(set(assign))
+                repetition_penalty = (n_slots - unique_cnt) * 300.0
+
+                distinct_indices = list(set(assign))
+                if len(distinct_indices) > 1:
+                    inter_sims = [
+                        subtopic_inter_sim[distinct_indices[a]][distinct_indices[b]]
+                        for a in range(len(distinct_indices))
+                        for b in range(a + 1, len(distinct_indices))
+                    ]
+                    mean_inter_sim = float(np.mean(inter_sims))
+                    semantic_diversity_reward = (1.0 - mean_inter_sim) * 100.0
+                else:
+                    semantic_diversity_reward = 0.0
+
+                tot_sim = sum(max_sim[idx][j_idx] for idx, j_idx in enumerate(assign))
+                return (above_cnt * 1000.0) + (soft_above_cnt * 200.0) + (unique_cnt * diversity_weight) - repetition_penalty + semantic_diversity_reward + tot_sim
+
+            used_indices = set()
+            assignment = []
+            for i in range(n_slots):
+                valid_unused = [j for j in range(n_subtopics) if j not in used_indices and max_sim[i][j] >= min_threshold]
+                if valid_unused:
+                    best_j = max(valid_unused, key=lambda j: max_sim[i][j])
+                else:
+                    soft_unused = [j for j in range(n_subtopics) if j not in used_indices and max_sim[i][j] >= soft_threshold]
+                    if soft_unused:
+                        best_j = max(soft_unused, key=lambda j: max_sim[i][j])
+                    else:
+                        unused_any = [j for j in range(n_subtopics) if j not in used_indices]
+                        if unused_any:
+                            best_j = max(unused_any, key=lambda j: max_sim[i][j])
+                        else:
+                            best_j = int(np.argmax(max_sim[i]))
+                assignment.append(best_j)
+                used_indices.add(best_j)
+
+            best_assignment = list(assignment)
+            best_score = _eval_score(best_assignment)
+
+            for i in range(n_slots):
+                for j in range(n_subtopics):
+                    curr = list(best_assignment)
+                    curr[i] = j
+                    sc = _eval_score(curr)
+                    if sc > best_score:
+                        best_score = sc
+                        best_assignment = curr
+
+            for i1 in range(n_slots):
+                for i2 in range(i1 + 1, n_slots):
+                    curr = list(best_assignment)
+                    curr[i1], curr[i2] = curr[i2], curr[i1]
+                    sc = _eval_score(curr)
+                    if sc > best_score:
+                        best_score = sc
+                        best_assignment = curr
+
+            assigned_subtopics_by_topic[topic] = [subtopics_pool[j] for j in best_assignment]
+
+        return assigned_subtopics_by_topic
 
     def generate_exam(
         self,
@@ -909,31 +1368,22 @@ Do not return any explanations or markdown wrapper, return only raw JSON."""
         question_number = 0
         spec_trees = {}
 
-        def _get_subtopics(tree_obj: Any) -> list[str]:
-            if isinstance(tree_obj, dict):
-                if "subtopics" in tree_obj and isinstance(tree_obj["subtopics"], list):
-                    return [s for s in tree_obj["subtopics"] if isinstance(s, str)]
-                return [k for k in tree_obj.keys() if not k.startswith("_")]
-            elif isinstance(tree_obj, list):
-                return [s for s in tree_obj if isinstance(s, str)]
-            return []
-
         for topic in exam_structure:
             spec_tree = self._get_spec_tree_cached(topic, exam_type)
             spec_trees[topic] = spec_tree
-            subtopics_pool = _get_subtopics(spec_tree)
-            used_subtopics: list[str] = []
 
-            for mark_info in exam_structure[topic]:
+        # Optimize subtopic assignments across question slots to maximize >= 50% subtopic similarity
+        optimized_subtopics = self._optimize_topic_subtopic_assignments(
+            exam_structure, exam_type, spec_trees
+        )
+
+        for topic in exam_structure:
+            spec_tree = spec_trees[topic]
+            assigned_list = optimized_subtopics.get(topic, [])
+
+            for slot_idx, mark_info in enumerate(exam_structure[topic]):
                 question_number += 1
-                
-                # Single broad subtopic for the question
-                if not subtopics_pool:
-                    subtopics_pool = _get_subtopics(spec_tree)
-                subtopic = self.local_similarity.pick_least_similar(subtopics_pool, used_subtopics)
-                if subtopic in subtopics_pool:
-                    subtopics_pool.remove(subtopic)
-                used_subtopics.append(subtopic)
+                subtopic = assigned_list[slot_idx] if slot_idx < len(assigned_list) else topic
 
                 tasks.append({
                     "number": question_number,

@@ -1,0 +1,1832 @@
+Edexcel and BTEC Qualifications 
+ 
+Edexcel and BTEC qualifications are awarded by Pearson, the UK’s largest awarding 
+body. We provide a wide range of qualifications including academic, vocational, 
+occupational and specific programmes for employers. For further information visit 
+our qualific ations websites at www.edexcel.com or www.btec.co.uk. Alternatively, 
+you can get in touch with us using the details on our contact us page at 
+www.edexcel.com/contactus. 
+ 
+ 
+ 
+ 
+ 
+Pearson: helping people progress, everywhere 
+Pearson aspires to be the world’s leading learning company. Our aim is to help 
+everyone progress in their lives through education. We believe in every kind of 
+learning, for all kinds of people, wherever they are in the world. We’ve been 
+involved in education for over 150 years, and by working across 70 countries, in 
+100 languages, we have built an international reputation for our commitment to 
+high standards and raising achievement through innovation in education. Find out 
+more about how we can help you and your students at:www.pearson.com/uk 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+November 2021 
+Publications Code 1PH0_1H_2111_MS 
+All the material in this publication is copyright 
+© Pearson Education Ltd 2021 
+ 
+ 
+ 
+
+ 
+General Marking Guidance 
+  
+• All candidates must receive the same treatment.   Examiners must 
+mark the first candidate in exactly the same way as they mark the 
+last. 
+• Mark schemes should be applied positively. Candidates must be 
+rewarded for what they have shown they can do rather than 
+penalised for omissions. 
+• Examiners should mark according to the mark scheme not according 
+to their perception of where the grade boundaries may lie. 
+• There is no ceiling on achievement. All marks on the mark scheme 
+should be used appropriately. 
+• All the marks on the mark scheme are designed to be awarded. 
+Examiners should always award full marks if deserved, i.e. if the 
+answer matches the mark scheme.   Examiners should also be 
+prepared to award zero marks if the candidate’s response is not 
+worthy of credit according to the mark scheme. 
+• Where some judgement is required, mark schemes will provide the 
+principles by which marks will be awar ded and exemplification may 
+be limited. 
+• When examiners are in doubt regarding the application of the mark 
+scheme to a candidate’s response, the team leader must be 
+consulted. 
+• Crossed out work should be marked UNLESS the candidate has 
+replaced it with an alternative response. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+  
+
+Mark schemes have been developed so that the rubrics of each mark scheme reflects the 
+characteristics of the skills within the AO being targeted and the requirements of the 
+command word. So for example the command word ‘Explain’ requires an identification of a 
+point and then reasoning/justification of the point.  
+Explain questions can be asked across all AOs. The distinction comes whether the 
+identification is via a judgment made to reach a conclusion, or, making a point t hrough 
+application of knowledge to reason/justify the point made through application of 
+understanding. It is the combination and linkage of the marking points that is needed to gain 
+full marks. 
+When marking questions with a ‘describe’ or ‘explain’ command word, the detailed marking 
+guidance below should be consulted to ensure consistency of marking. 
+ 
+Assessment 
+Objective 
+Command Word 
+Strand Element Describe Explain 
+ AO1* An answer that combines the 
+marking points to provide a 
+logical description 
+An explanation that links 
+identification of a point with 
+reasoning/justification(s) as 
+required 
+ AO2 An answer that combines the 
+marking points to provide a 
+logical description, showing 
+application of knowledge and 
+understanding 
+An explanation that links 
+identification of a point (by 
+applying knowledge) with 
+reasoning/justification 
+(application of understanding) 
+ AO3 1a and 
+1b 
+An answer that combines 
+points of 
+interpretation/evaluation to 
+provide a logical description 
+  
+ AO3 2a and 
+2b 
+  An explanation that combines 
+identification via a judgment to 
+reach a conclusion via 
+justification/reasoning 
+ AO3 3a  An answer that combines the 
+marking points to provide a 
+logical description of the 
+plan/method/experiment 
+  
+ AO3 3b   An explanation that combines 
+identifying an improvement of 
+the experimental procedure 
+with a linked 
+justification/reasoning 
+
+*there will be situations where an AO1 question will include elements of recall of 
+knowledge directly from the specification (up to a maximum of 15%). These will be 
+identified by an asterisk in the mark scheme. 
+   
+Question 
+number 
+Answer Mark 
+1(a) 
+ 
+D 23 kHz 
+ 
+A,B and C are not correct because they are all 
+below 20 kHz 
+        
+(1) 
+AO2 
+  
+ 
+ 
+Question 
+number 
+Answer Additional 
+guidance 
+Mark 
+ 1(bi) An explanation linking: 
+ 
+frequency (1) 
+ 
+ 
+ 
+ 
+ 
+ 
+in mouse hearing range but not 
+in human hearing range (1) 
+ 
+ 
+accept 
+wavelength 
+relevant 
+frequency value 
+with unit  
+eg>20 kHz 
+(2) 
+AO2 
+ 
+ 
+Question 
+number 
+Answer Additional 
+guidance 
+Mark 
+ 1(bii) A description to include: 
+ 
+send pulse to a wall/reflecting 
+surface OR detect the echo (1) 
+ 
+ 
+ 
+ 
+ 
+ 
+measure distance (to wall and 
+time to echo) (1) 
+ 
+use speed = 2 x distance  (1) 
+                           time 
+ 
+ 
+ 
+accept measure 
+time to receive 
+echo OR 
+reflection back 
+ 
+OR record time to 
+echo/return 
+(3) 
+AO3 
+ 
+ 
+ 
+ 
+(Total for Question 1 = 6 marks) 
+
+ 
+ 
+ 
+ 
+ 
+ 
+Question 
+number 
+Answer Additional 
+guidance 
+Mark 
+ 2(a) 
+CS1 
+uses data taken from x axis (1) 
+ 
+ 
+28(cm) (1) 
+ 
+ 
+ 
+ 
+ 
+award full marks 
+for correct 
+answer without 
+working 
+ 
+(2) 
+AO3 
+ 
+ 
+ 
+Question 
+number 
+Answer Additional 
+guidance 
+Mark 
+2 b(i) 
+CS1 
+ 
+a description to include   
+ 
+ count the number of waves(1) 
+ 
+ 
+(arriving/passing a point) in a 
+specific time(1) 
+  
+ 
+ 
+ use  
+frequency = number of waves 
+                             time       
+(1) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ignore in one 
+second 
+ 
+ 
+ 
+ 
+count the 
+number of waves 
+in one second 
+scores 2 marks 
+(MP1 and MP3) 
+ 
+find the time 
+between one 
+wave and the 
+next 
+scores 2 marks 
+(MP1 and MP2) 
+ 
+(3) 
+AO1 
+ 
+ 
+ 
+ 
+
+ 
+Question 
+number 
+Answer Additional 
+guidance 
+Mark 
+2 b(ii) 
+CS1 
+substitution (1)  
+ 
+1.5 = 0.7 x λ 
+ 
+ 
+ 
+ 
+ 
+rearrangement and 
+evaluation 
+2.1(4) m 
+ 
+ 
+1.5 
+0.7 
+ 
+allow  0.7 
+         1.5 
+for 1 mark 
+ 
+ 
+ 
+award full marks for 
+correct answer 
+without working. 
+ 
+ λ = v/f scores 1 
+mark 
+ 
+(2) 
+AO2 
+ 
+ 
+ 
+Question 
+number 
+Answer Additional 
+guidance 
+Mark 
+2 b(iii) 
+CS1 
+ 
+A description to include: 
+ 
+ mention of 
+oscillations/vibrations (1) 
+ 
+ 
+EITHER 
+transverse – (oscillations) 
+perpendicular to direction of 
+wave (travel) (1) 
+OR 
+longitudinal – (oscillations) in 
+same direction as wave 
+(travel) (1) 
+ 
+ 
+ 
+ 
+up and down OR 
+side to side 
+(movements) OR 
+back and forth 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+transverse 
+movement up and 
+down but 
+longitudinal is side 
+to side  (1 mark 
+only) 
+(2) 
+AO1 
+ 
+ 
+ 
+ 
+                        Total marks for Question 2H =9    
+
+      
+Question 
+number 
+Answer Mark 
+3(a) 
+CS2 
+B ionising and emitted by unstable nuclei 
+ 
+A is incorrect stable nuclei do not give radioactive 
+emissions 
+ 
+C is incorrect not all radioactive emissions are 
+neutral 
+ 
+D is incorrect not all radioactive emissions are 
+neutral  
+ 
+        
+(1) 
+ AO1 
+ 
+Question 
+number 
+Answer Additional 
+guidance 
+Mark 
+3(b) 
+CS2 
+ 
+same number of protons (1) 
+ 
+ 
+ 
+different number of neutrons (1) 
+ 
+ 
+ 
+same atomic 
+number 
+ 
+ 
+different mass 
+number 
+ 
+ 
+(2) 
+AO2 
+ 
+  
+  
+Question 
+number 
+Answer 
+   
+Additional 
+guidance 
+Mark 
+3(c )(i) 
+CS2 
+An explanation to include; 
+ 
+there is no aluminium to 
+absorb β particles (1)     
+ 
+ 
+(therefore) 
+more β particles reach the G-
+M tube   (1) 
+ 
+  
+ 
+ 
+aluminium 
+absorbs/stops/blocks 
+beta particles 
+ 
+ 
+ 
+ 
+accept reverse 
+arguments  
+ 
+accept radiation for 
+beta particles 
+ 
+(2) 
+AO2 
+  
+ 
+ 
+ 
+
+Question 
+number 
+Answer 
+ 
+Additional 
+guidance 
+Mark 
+3 c (ii) 
+CS2 
+(idea of) background radiation a named source 
+of background 
+radiation 
+(1) 
+ AO3 
+ 
+ 
+Question 
+number 
+Answer 
+ 
+Additional 
+guidance 
+Mark 
+3c (iii) 
+CS2 
+becquerel    accept Bq  
+accept close 
+spelling 
+ 
+(1) 
+AO1 
+ 
+ 
+Question 
+number 
+Answer 
+ 
+Additional 
+guidance 
+Mark 
+3d 
+CS2 
+  33 days is 3 half-lives (1)  
+ 
+ 
+2.1(25) × 1022 (1) 
+ 
+1.7 × 1023 
+ 2 (× 2 × 2) 
+ 
+2.1(25) to any 
+other power of 
+ten scores mp1 
+only 
+ 
+award full marks 
+for correct 
+answer without 
+working. 
+ 
+(2) 
+AO2 
+ 
+                                     
+
+        
+Question 
+number 
+Answer Mark 
+4 (a) 
+ 
+The only correct answer is  
+D  the discovery of cosmic microwave background 
+(CMB) radiation  
+ 
+A is not correct because it does not indicate the 
+Universe had a beginning  
+ 
+B  is not correct, it is evidence against the 
+geocentric model of the Universe 
+ 
+C is not correct, it is evidence for other solar 
+systems 
+ 
+(1) 
+AO1 
+  
+ 
+Question 
+number 
+Answer Additional 
+guidance 
+Mark 
+4(b)  
+A description to include: 
+ 
+wavelength (of the light) (1) 
+ 
+ 
+appears to increase (1) 
+[increase must be linked 
+with wavelength] 
+ 
+ 
+ 
+ 
+ 
+ 
+Red shift/Doppler 
+effect 
+ 
+(Red shift) shows 
+galaxy moving away 
+ 
+ 
+accept answers in 
+terms of frequency 
+ 
+(2) 
+AO1 
+  
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+Question 
+number 
+Answer Additional 
+guidance 
+Mark 
+4 (c) 
+ 
+similarity 
+(both have) expanding 
+Universe (1) 
+ 
+difference one from: 
+Steady State, Universe has 
+no beginning (1)  
+ 
+Steady State theory 
+requires the continual 
+formation of new matter, 
+the Big Bang theory does 
+not (1) 
+ 
+ 
+ 
+ 
+different 
+interpretation of 
+CMBR 
+(2) 
+AO1 
+ 
+ 
+Question 
+number 
+Answer Additional guidance Mark 
+4 (d)(i) 
+ 
+1050 ± 20 (km/s)  
+ 
+ 
+(1) 
+AO3 
+ 
+Question 
+number 
+Answer Additional guidance Mark 
+4 (d)(ii) 
+ 
+attempt at Δy (1) 
+                  Δx 
+ 
+evaluation (1) 
+ 
+70 ± 5  
+ 
+ 
+ 
+unit (1) 
+ 
+km/s/Mpc 
+could be seen on 
+graph 
+ 
+ 
+ 
+award 2 marks for 
+correct answer 
+without working 
+ 
+independent mark 
+ 
+km/s Mpc 
+s-1 or per second  
+ 
+(3) 
+AO3 
+ 
+ 
+ 
+                 
+
+Question 
+number 
+Answer Additional guidance Mark 
+4 (d)(iii) 
+ 
+an explanation linking: 
+ 
+points are scattered widely 
+about the line (on graph) (1) 
+ 
+giving wide range of possible 
+gradients (1) 
+ 
+ 
+ 
+there are many 
+possible best fit lines 
+ 
+ 
+(2) 
+AO3 
+ 
+ 
+ 
+  
+(Total for Question 4 = 11 marks) 
+  
+
+Question 
+number 
+Answer Additional guidance Mark 
+5 (a)(i) 
+CS3 
+ 
+curve through origin, 
+through all points – by 
+eye (1) 
+ 
+ 
+(1) 
+AO1 
+ 
+ 
+ 
+ 
+Question 
+number 
+ 
+Answer Additional guidance Mark 
+5 (a)(ii) 
+CS3 
+ 
+ 
+ 
+(r =) 42(°) ± 2(°)   (1) 
+ 
+ECF their graph 
+(1) 
+AO3 
+ 
+ 
+ 
+ 
+Question 
+number 
+Answer Additional guidance Mark 
+5 (a)(iii) 
+CS3 
+ 
+ 
+Description to include two from: 
+r increases as i increases (1)  
+ 
+ 
+(but) not in proportion (1) 
+ 
+ 
+ 
+ 
+increase in r becomes less (for 
+same increase in i )  (1) 
+ 
+r increases as i 
+increases  
+  
+(but) not in even 
+steps/not straight 
+line/non-
+linear/gradient 
+changes 
+ 
+r always less than i  
+(2) 
+AO3 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+
+Question 
+number 
+Answer Mark 
+5 (b) 
+CS3 
+ 
+ 
+ wave velocity wavelength 
+[x] A decreases decreases 
+ 
+B is not correct because the wavelength does not 
+increase 
+C and are not correct because the wave velocity does not 
+increase 
+ 
+(1) 
+AO1 
+ 
+ 
+ 
+Question 
+number 
+Answer Additional guidance Mark 
+5 (c) 
+CS3 
+ 
+ 
+Explanation linking three from: 
+ 
+(some) light is reflected (1) 
+ 
+(at) the top edge (1) 
+ 
+(some) light is absorbed (1) 
+ 
+by the glass (1) 
+ 
+ 
+ 
+ 
+ 
+in the air 
+ 
+ 
+ 
+in the (glass) block 
+ 
+credit responses in 
+terms of attenuation/ 
+dispersion/reflection 
+at the second 
+face/spreading out 
+ 
+(3) 
+AO2 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Question 
+number 
+Answer Mark 
+5 (d)  
+CS3 
+ 
+ 
+B is the correct answer 
+ 
+(1) 
+AO3 
+ 
+ 
+
+
+A is not correct because the velocity in air is the same 
+before and after the glass 
+ 
+C is not correct because the velocity is constant inside the 
+glass 
+ 
+D is no correct because the velocity in glass is not greater 
+than the velocity in air 
+ 
+ 
+ 
+Total for Question 5 = 9 marks) 
+  
+
+ 
+ 
+Question 
+number 
+Answer Mark 
+6 (a) 
+CS4 
+ 
+ 
+A is not correct because it shows a constant velocity 
+of 0.4 m/s 
+ 
+B and D are not correct because they show constant 
+acceleration. 
+(1) 
+AO3 
+ 
+ 
+ 
+ 
+Question 
+number 
+Answer Additional guidance Mark 
+6 (b)(i) 
+CS4 
+attempt to use correct data from 
+graph or equation (1) 
+ 
+ 
+ 
+substitution (1) 
+ 
+(a =) 26 – 14 
+            34 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+evaluation to 2 sf  (1) 
+ 
+0.35 (m/s2) 
+quoting a = (Δ) v 
+                       t 
+ 
+or a = gradient (of 
+line) 
+ 
+ 
+ 
+0.3529... 
+scores mp1 and mp2 
+ 
+26  
+34   
+scores mp1  
+ 
+ 
+independent mark 
+ 
+ 
+award full marks for 
+correct answer 
+without working. 
+ 
+(3) 
+AO2 
+ 
+ 
+ 
+ 
+
+
+ 
+ 
+Question 
+number 
+Answer Additional guidance Mark 
+6 (b)(ii) 
+CS4 
+attempt to calculate area under 
+the line (1) 
+ 
+calculates EITHER area of 
+triangle 
+OR area of rectangle (1) 
+ 
+204 (m) or 476 (m)  
+ 
+evaluation (1) 
+680 (m) 
+accept count squares 
+use of v2-u2 = 2ax 
+ 
+ 
+x = v2-u2 
+        2a 
+allow ecf from b(i) 
+ 
+ 
+ 
+ 
+ 
+award full marks for 
+correct answer 
+without working 
+ 
+award 1 mark for final 
+answer 408 (m) 
+(3) 
+AO2 
+ 
+ 
+ 
+ 
+ 
+Question 
+number 
+Answer Additional guidance Mark 
+6 (c) 
+CS4 
+An explanation linking three of: 
+ 
+acceleration increases (1) 
+ 
+as F = ma (1) 
+ 
+(and) mass decreases (1) 
+ 
+due to burning/using fuel (1) 
+ 
+ 
+ 
+ 
+ 
+independent mark 
+(3) 
+AO1 
+ 
+ 
+ 
+  
+
+Question 
+number 
+Answer Additional 
+guidance 
+Mark 
+7(a) 
+CS5 
+substitution (1) 
+ 
+(t2=) 2 × 1.4 
+           10 
+ 
+evaluation (1) 
+ 
+(t =) 0.53 (s) 
+ 
+ 
+ 
+ 
+0.28 
+ 
+ 
+ 
+ 
+allow numbers that 
+round to 0.53 e.g. 
+0.52915 
+ 
+award full marks for 
+correct answer 
+without working. 
+ 
+ 
+(2) 
+AO2 
+ 
+   
+Question 
+number 
+Answer Additional 
+guidance 
+Mark 
+7(b)(i) 
+CS5 
+(students’) reaction time (is 
+significant compared with 
+recorded time) (1) 
+ 
+ 
+g is really 9.8 
+ 
+ 
+(1) 
+AO2 
+  
+Question 
+number 
+Answer Additional 
+guidance 
+Mark 
+7(b)(ii) 
+CS5 
+One from 
+ 
+use light gates (1) 
+ 
+use automatic timer (1) 
+ 
+Use time lapse/ stroboscopic 
+photography (1) 
+ 
+drop from greater height (1) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ignore repeats or 
+more people 
+(1) 
+AO3 
+ 
+           
+
+  
+Question 
+number 
+Answer Additional guidance Mark 
+7(c)(i) 
+ 
+ 
+substitution (1) 
+ 
+(force =) 8.7 
+             0.35 
+ 
+evaluation (1) 
+ 
+25 (N) 
+ 
+ 
+ 
+ 
+use of  
+force = change in momentum 
+                     time 
+ 
+ 
+ 
+allow numbers that round to 
+25 e.g 24 .8571 
+ 
+award full marks for correct 
+answer without working. 
+ 
+ 
+(2) 
+AO2 
+  
+  
+Question 
+number 
+Answer Additional 
+guidance 
+Mark 
+7(c)(ii) 
+ 
+ 
+(magnitude) 25 (N) (1) 
+ 
+(direction) down(wards)/ 
+towards floor (1) 
+ecf from 7bi 
+ 
+allow 
+arrow drawn 
+pointing down 
+ 
+“south” 
+(2) 
+AO3 
+                                       
+
+    
+Question 
+number 
+Answer Additional 
+guidance 
+Mark 
+7(d) Two stage calculation 
+ 
+substitution1 (1)  
+ 
+ 
+ 
+(v2 – 0 =) 2 × 10 × 3.8 
+ 
+evaluation of v (1) 
+ 
+(v =) 8.7 (m/s) 
+ 
+ 
+substitution2 (1) 
+ 
+0.40 = m × 8.7 
+ 
+ 
+rearrangement and 
+evaluation (1) 
+(m =) 0.046 (kg) 
+ 
+  
+ 
+ 
+ 
+ 
+ 
+ 
+use of v2 - u2 = 2ax 
+OR 
+½ mv2 = mgh 
+ 
+76 
+ 
+ 
+ 
+allow numbers that 
+round to 8.7 e.g. 
+8.718 
+ 
+ 
+use of p = mv 
+ 
+ 
+ 
+ 
+allow numbers that 
+round to 0.046 e.g. 
+0.04598 
+ 
+award full marks for 
+correct answer 
+without working. 
+ 
+ 
+ 
+(4) 
+AO2 
+  
+  Total for Question 7 = 12 marks)                           
+
+    
+ Answer Mark 
+8(a) 
+ 
+C Mars and Jupiter 
+ 
+A, B and D are not correct because these are not the 
+location of the asteroid belt 
+ 
+(1) 
+AO1 
+ 
+ 
+    
+ Answer Additional guidance Mark 
+8(b) rearrangement and substitution 
+(1) 
+ 
+(t =) 2.2 (× 1012) 
+        1.9 (× 104) 
+ 
+evaluation (1) 
+ 
+1.2 × 108 (s) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+allow numbers that 
+round to 1.2 × 108  e.g. 
+1.1579 × 108 
+ 
+award full marks for 
+correct answer 
+without working. 
+ 
+(2) 
+AO2 
+ 
+ 
+ 
+  
+ Answer Additional guidance Mark 
+8(c) An explanation linking two from: 
+ 
+a = Δv  (1) 
+       t 
+ 
+velocity/ acceleration is a vector 
+(1) 
+ 
+the direction (of Vesta/velocity) is 
+changing (1) 
+ 
+ 
+ 
+velocity is changing 
+ 
+ 
+vector has magnitude 
+and direction 
+(2) 
+AO1 
+ 
+ 
+ 
+      
+
+           
+ Answer Additional guidance Mark 
+8(d) An explanation linking: 
+ 
+Vesta (also) radiates (energy) (1) 
+ 
+ 
+the same amount of energy that 
+it absorbs (1) 
+ 
+in the same time (1) 
+ 
+ 
+ 
+allow emits (OWTE)for 
+radiates 
+ 
+ 
+ 
+ 
+‘Vesta radiates at the 
+same average power 
+that it absorbs’ scores 
+all three MPs  
+‘Vesta radiates energy 
+at the same rate that it 
+absorbs’ scores all 
+three MPs 
+(3) 
+AO1 
+ 
+ 
+ 
+   
+ Answer Additional guidance Mark 
+8(e)(i) W (1) 
+ 
+accept watt(s) 
+J/s 
+ 
+do NOT accept  
+Ws 
+W/s 
+watt(s) per second 
+ 
+(1) 
+AO2 
+ 
+ 
+                    
+
+          
+ Answer Additional guidance Mark 
+8(e)(ii) evaluation of K (1) 
+ 
+K = 1(2) × 1400     
+ 
+substitution (1) 
+ 
+(intensity =) 1400  
+                      2.42 
+ 
+ 
+ 
+evaluation (1) 
+ 
+240 (W/m2) 
+ 
+ 
+ 
+ 
+ 1400 
+ 
+ 
+ 
+accept for one mark 
+intensity = K  
+                  2.42 
+ 
+ 
+ 
+ 
+ 
+allow numbers that 
+round to 240 e.g. 
+243.05 
+ 
+accept answers in 
+terms of ratios  
+ 
+award full marks for 
+correct answer 
+without working. 
+ 
+ 
+(3) 
+AO2 
+ 
+ 
+ 
+ 
+Total for question 8 = 12 marks 
+  
+
+ 
+ 
+ Answer Additional guidance Mark 
+9(a)  
+ 
+A description to include two from: 
+ 
+ 
+(radioactive material/substances) 
+inside the food/body (1) 
+ 
+emit radiation from inside the 
+body (1) 
+ 
+damage body cells (1) 
+ 
+ 
+ 
+ 
+ 
+trapped in the body 
+ 
+exposed to 
+radioactivity 
+ 
+cause cancer 
+(2) 
+AO1 
+ 
+ 
+ 
+  
+ Answer Additional guidance Mark 
+9(b) An explanation linking two from: 
+ 
+to preserve food (1) 
+ 
+by ‘killing’ bacteria (1) 
+ 
+(gamma) is (very) penetrating 
+(and so reaches all the food). (1) 
+ 
+sterilising (1) 
+ 
+ 
+ 
+stop food going off 
+ 
+ 
+(2) 
+AO2 
+ 
+ 
+ 
+    
+ Answer Additional guidance Mark 
+9(c) One from: 
+ 
+rearrangement (of particles) (1) 
+ 
+loses/emits energy (1)  
+ 
+becomes (more) stable (1) 
+ 
+ 
+ 
+ 
+ 
+(1) 
+AO1 
+ 
+ 
+ 
+           
+
+         
+Questio
+n 
+number 
+Indicative content Mark 
+9 *(d)  Answers will be credited according to candidate's 
+deployment of knowledge and understanding of the 
+material in relation to the qualities and skills outlined 
+in the generic mark scheme. 
+The indicative content below is not prescriptive, and 
+candidates are not required to include all the material 
+which is indicated as relevant. Additional content 
+included in the response must be scientific and 
+relevant. 
+AO1 1    (6 marks) 
+alpha 
+• a particle (not a wave) 
+• made up of 4 particles 
+• helium nucleus 
+• has a positive charge 
+• when emitted by a nucleus, atomic number goes 
+down by 2 
+• mass number goes down by 4 
+ 
+beta 
+• a particle (not a wave) 
+• made up of 1 particle 
+• electron (or positron) 
+• has a negative charge 
+• when emitted, atomic number goes up by 1 
+• mass number does not change 
+ 
+Ignore references to range, penetration, ionisation. 
+ 
+(6) 
+AO1 
+                    
+
+      
+Level Mark Descriptor 
+ 
+ 0 • No rewardable material. 
+Level 1 1-2 • Demonstrates elements of physics understanding, some of 
+which is inaccurate. Understanding of scientific ideas lacks 
+detail.  (AO1)  
+• Presents an explanation with some structure and 
+coherence. (AO1) 
+Level 2 3-4 • Demonstrates physics understanding, which is mostly 
+relevant but may include some inaccuracies. Understanding 
+of scientific ideas is not fully detailed and/or developed. 
+(AO1) 
+• Presents an explanation that has a structure which is 
+mostly clear, coherent and logical. (AO1) 
+Level 3 5-6 • Demonstrates accurate and relevant physics understanding 
+throughout. Understanding of the scientific ideas is detailed 
+and fully developed.  (AO1) 
+• Presents an explanation that has a well -developed 
+structure which is clear, coherent and logical. (AO1) 
+                                            
+
+Level  Mark  Additional Guidance  General additional guidance – the 
+decision within levels  
+e.g. - At each level, as well as 
+content, the scientific coherency of 
+what is stated will help place the 
+answer at the top, or the bottom, of 
+that level.  
+  0  No rewardable material.    
+Level 1  1–2  Additional guidance  
+isolated facts  
+ 
+Possible candidate responses  
+A beta particle is an electron. An 
+alpha particle is a helium nucleus 
+Level 2  3–4  Additional guidance  
+effect of alpha and beta 
+decay 
+or 
+nature and effect of 
+alpha or beta 
+Possible candidate responses  
+A beta particle is an electron. When 
+emitted the mass number doesn’t 
+change but atomic number goes up 
+by one 
+ 
+Level 3  5–6 Additional guidance  
+detailed comparison 
+that includes  
+nature of alpha and 
+nature of beta and 
+effect of either alpha or 
+beta 
+OR 
+effect of alpha and beta 
+and nature of either 
+alpha or beta 
+Possible candidate responses  
+Alpha particle is a helium nucleus  
+AND 
+ 
+A beta particle is an electron.  
+When emitted the mass number 
+doesn’t change but atomic number 
+goes up by one 
+ 
+  
+Total for Question 9 = 11 marks 
+  
+
+ 
+ 
+ Answer Additional guidance Mark 
+10(a)i() Two from: 
+ 
+falling water/hydro (1) 
+tides (1)  
+sun/solar (1) 
+geothermal (1) 
+biomass (1) 
+ 
+ 
+ 
+ 
+(2) 
+AO1 
+ 
+ 
+ 
+  
+ Answer Additional guidance Mark 
+10(a)(ii) recall and substitution (1) 
+ 
+(%) efficiency = 2.2 (× 100)  
+                                6.2 
+ 
+evaluation (1) 
+ 
+0.35 (1) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+allow numbers that 
+round to 0.35 e.g. 
+0.3548 
+ 
+accept 35(%) for full 
+marks 
+ 
+award full marks for 
+correct answer 
+without working. 
+ 
+(2) 
+AO2 
+ 
+ 
+ 
+                         
+
+ Answer Additional guidance Mark 
+10(a)(iii) One from: 
+ 
+air (has to be) moving on the 
+other side of the blades (1) 
+ 
+not all of the air hits the blade (1) 
+ 
+friction within the 
+turbine/generator (1) 
+ 
+some energy (always) transferred 
+to thermal (1) 
+ 
+it is fitted with a speed limiter (1)  
+ (1) 
+AO3 
+ 
+ 
+ 
+ 
+  
+
+Questio
+n 
+number 
+Indicative content Mark 
+10 *(b)  Answers will be credited according to candidate's 
+deployment of knowledge and understanding of 
+the material in relation to the qualities and skills 
+outlined in the generic mark scheme. 
+The indicative content below is not prescriptive, 
+and candidates are not required to include all the 
+material which is indicated as relevant. 
+Additional content included in the response must 
+be scientific and relevant. 
+AO1 1    (6 marks) 
+fission 
+• (heavy) nucleus split 
+• by a neutron 
+• releases 2 daughter nuclei + more neutrons + 
+energy 
+• starts chain reaction 
+ 
+advantages 
+• already in use 
+ 
+disadvantages 
+• waste is radioactive 
+• hard to dispose of 
+• risk of accident 
+ 
+fusion 
+• (light) nuclei joined 
+• at high energy/temperature/pressure/particle 
+density 
+• releases (eg) helium + energy 
+ 
+advantages 
+• no harmful waste products  
+disadvantages 
+• not achieved yet (on a practicable scale) 
+• difficulty in achieving high   
+energy/temperature/pressure/particle 
+density  
+ 
+(6) 
+AO1 
+     
+
+        
+Level Mark Descriptor 
+ 
+ 0 • No rewardable material. 
+Level 1 1-2 • Demonstrates elements of physics understanding, some of 
+which is inaccurate. Understanding of scientific ideas lacks 
+detail.  (AO1)  
+• Presents an explanation with some structure and 
+coherence. (AO1) 
+Level 2 3-4 • Demonstrates physics understanding, which is mostly 
+relevant but may include some inaccuracies. Understanding 
+of scientific ideas is not fully detailed and/or developed. 
+(AO1) 
+• Presents an explanation that has a structure which is 
+mostly clear, coherent and logical. (AO1) 
+Level 3 5-6 • Demonstrates accurate and relevant physics understanding 
+throughout. Understanding of the scientific ideas is detailed 
+and fully developed.  (AO1) 
+• Presents an explanation that has a well -developed 
+structure which is clear, coherent and logical. (AO1) 
+                                            
+
+Level  Mark  Additional 
+Guidance  
+General additional guidance – 
+the decision within levels  
+e.g. - At each level, as well as 
+content, the scientific coherency 
+of what is stated will help place 
+the answer at the top, or the 
+bottom, of that level.  
+  0  No rewardable 
+material.  
+  
+Level 1  1–2  Additional guidance  
+isolated facts  
+  
+Possible candidate responses  
+fission involves a nucleus being 
+split by a neutron 
+Level 2  3–4  Additional guidance  
+simple comparison of 
+fission and fusion 
+Possible candidate responses  
+fission involves a nucleus being 
+split by a neutron whereas fusion 
+requires combining two light 
+nuclei. 
+Level 3  5–6 Additional guidance  
+detailed comparison 
+of fission and fusion 
+and one advantage or 
+one difficulty 
+compared to the 
+other 
+ 
+Possible candidate responses  
+Fission involves nuclei split by a 
+neutron. Fusion involves 
+combining two light nuclei. The 
+waste from fission is radioactive. 
+Practicable fusion has not been 
+achieved.  
+   
+(Total for Question 10 = 11 marks) 
+  
+ 
+TOTAL FOR PAPER = 100 MARKS 
+   
+Pearson Education Limited. Registered company number 872828  
+with its registered office at 80 Strand, London, WC2R 0RL, United Kingdom 

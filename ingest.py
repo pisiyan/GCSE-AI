@@ -7,8 +7,15 @@ and processes them into FAISS vector databases.
 import logging
 import os
 import sys
+
+from dotenv import load_dotenv
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(dotenv_path=os.path.join(script_dir, ".env"), override=True)
+
 from config import SUBJECT_CONFIGS, load_subject_config
-from load_and_store import DatabaseManager
+from load_and_store import DatabaseManager, VectorStore
+from build_spec_summary import generate_specification_summary
 
 logging.basicConfig(
     level=logging.INFO,
@@ -75,9 +82,35 @@ def ingest_all_subjects(target_subject: str = None) -> None:
             logger.warning("No ingestable folders found under %s", root_dir)
             continue
 
-        for folder_path in folders_to_process:
-            logger.info("Processing folder: %s", folder_path)
+        # 1. Separate specification folders from question paper & mark scheme folders
+        spec_folders = [f for f in folders_to_process if "specification" in f.lower()]
+        other_folders = [f for f in folders_to_process if "specification" not in f.lower()]
+
+        # 2. Ingest Specification FIRST
+        if spec_folders:
+            for folder_path in spec_folders:
+                logger.info("Processing specification folder first: %s", folder_path)
+                db_manager.add_folder_database(folder_path, database_path)
+
+        # 3. Generate Specification Content Summary immediately after specification ingestion (if not already existing)
+        try:
+            generate_specification_summary(subject, examiner, skip_if_exists=True)
+        except Exception as e:
+            logger.error("Failed to generate specification content summary for %s (%s): %s", subject, examiner, e)
+
+        # 4. Ingest QuestionPapers and MarkSchemes AFTER specification
+        for folder_path in other_folders:
+            logger.info("Processing paper folder: %s", folder_path)
             db_manager.add_folder_database(folder_path, database_path)
+
+        # 5. Generate a plain text string output dump of the ingested vector database
+        vdb = VectorStore(database_path)
+        dump_text = vdb.dump_database_to_string(subject, examiner)
+        out_file = f"data/{subject}/{examiner}/{subject}-{examiner}-vectorDatabase_contents.txt"
+        with open(out_file, "w", encoding="utf-8") as f:
+            f.write(dump_text)
+        logger.info("Saved vector database text dump to: %s", out_file)
+        print(f"\nSaved readable vector database string dump to: {out_file}\n")
 
 
 if __name__ == "__main__":

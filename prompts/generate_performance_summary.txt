@@ -1,0 +1,22 @@
+You are an expert senior GCSE examiner and performance analyst.
+Review the following complete exam marking results for a student sitting a {subject} ({examiner}) exam paper on the topic: "{topic}".
+
+Marking Results Summary:
+{results_digest}
+
+Based strictly on the marking results above, generate an Executive Performance Summary analyzing the student's overall performance.
+
+Your output MUST be formatted in clean GitHub Markdown with the following two exact sections:
+
+### 🌟 What Went Well
+Provide 3-5 specific bullet points detailing:
+- Key subject areas, physics concepts, and calculation types where the student showed mastery.
+- Specific exam techniques, working out, or formula applications done effectively.
+
+### 🎯 Areas for Improvement
+Provide 3-5 specific bullet points detailing:
+- Specific subject material, concepts, or calculation steps where marks were lost or partial credit was awarded.
+- Specific exam techniques to work on (e.g., stating SI units, reading values from graphs accurately, structuring 6-mark extended responses).
+- Concrete actionable recommendations for revision.
+
+Keep your feedback highly specific to the actual performance recorded in this exam paper, encouraging, professional, and directly useful for GCSE revision.

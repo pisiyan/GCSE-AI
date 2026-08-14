@@ -1,0 +1,18 @@
+You are an expert exam question retriever.
+
+A canonical code lookup failed to find a matching item in the {store_type} store for question item:
+Canonical Code: {canonical_code}
+Question Text: {question_text}
+
+Below is the list of available unmatched items in the {store_type} store:
+{unmatched_items_json}
+
+Identify which unmatched item (if any) corresponds to this question item based on question context and content.
+
+Return ONLY valid JSON matching this schema:
+{
+  "matched": boolean,
+  "matched_code": "string or null",
+  "matched_content": "string or null",
+  "explanation": "brief reason for match"
+}

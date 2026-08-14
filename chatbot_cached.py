@@ -30,6 +30,7 @@ except ImportError:
     pypdf = None
 
 from llm_client import LLMClient
+from token_cost_tracker import global_tracker
 
 # ANSI Color Escape Codes
 class Colors:
@@ -209,6 +210,8 @@ class CachedChatbotAgent:
     def __init__(self, subject: str, examiner: str):
         self.subject = subject
         self.examiner = examiner
+        
+        global_tracker.start_session(f"Chatbot - {subject} ({examiner})")
         
         Colors.print_cyan(f"\nInitializing Full-Context GCSE Chatbot for {subject} ({examiner})...")
         self.context_text, self.stats = load_full_subject_context(subject, examiner)

@@ -34,6 +34,11 @@ class SubjectConfig:
     max_structure_retries: int = 50
     max_parallel_workers: int = 10
     max_parent_exemplars: int = 3
+    top_k_similar_choices: int = 3
+    similarity_threshold: float = 0.70
+    min_subtopic_similarity: float = 0.50
+    min_soft_subtopic_similarity: float = 0.35
+    subtopic_diversity_weight: float = 500.0
     fallback_embedding_dim: int = 384
     temperature_structure: float = 0.0
     temperature_generation: float = 0.7
@@ -61,7 +66,10 @@ SUBJECT_CONFIGS = {
         "example_questions": 8,
         "example_ms": 5,
         "example_descriptions": 0,
-        "question_no_importance": True,
+        "question_no_importance": False,
+        "top_k_similar_choices": 3,
+        "similarity_threshold": 0.70,
+        "min_subtopic_similarity": 0.50,
     },
     "Biology-Edexcel": {
         "mark_pattern": r"\((\d+)\)",
@@ -79,7 +87,10 @@ SUBJECT_CONFIGS = {
         "example_questions": 5,
         "example_ms": 5,
         "example_descriptions": 5,
-        "question_no_importance": True,
+        "question_no_importance": False,
+        "top_k_similar_choices": 3,
+        "similarity_threshold": 0.70,
+        "min_subtopic_similarity": 0.50,
     },
     "Physics-Edexcel": {
         "mark_pattern": r"\((\d+)\)",
@@ -97,7 +108,10 @@ SUBJECT_CONFIGS = {
         "example_questions": 5,
         "example_ms": 5,
         "example_descriptions": 5,
-        "question_no_importance": True,
+        "question_no_importance": False,
+        "top_k_similar_choices": 3,
+        "similarity_threshold": 0.70,
+        "min_subtopic_similarity": 0.50,
     },
 }
 

@@ -35,9 +35,11 @@ class TestMarkdownFormatter(unittest.TestCase):
         self.assertIn("# GCSE Biology (Edexcel) - Higher Exam", md_output)
         self.assertIn("**Total Marks:** 5", md_output)
         self.assertIn("## Topic: Topic A", md_output)
-        self.assertIn("### Question 1) (Subtopic: Photosynthesis Basics) *(3 marks)*", md_output)
+        self.assertIn("### Question 1) *(3 marks)*", md_output)
+        self.assertIn("* **Target Subtopic:** Photosynthesis Basics", md_output)
         self.assertIn("Explain photosynthesis.", md_output)
-        self.assertIn("### Question 2) (Subtopic: Chemical Formulas) *(2 marks)*", md_output)
+        self.assertIn("### Question 2) *(2 marks)*", md_output)
+        self.assertIn("* **Target Subtopic:** Chemical Formulas", md_output)
         self.assertIn("State the formula of glucose.", md_output)
 
     def test_format_exam_as_markdown_parent_question(self):
@@ -77,7 +79,8 @@ class TestMarkdownFormatter(unittest.TestCase):
         self.assertIn("# GCSE Biology (Edexcel) - Higher Exam", md_output)
         self.assertIn("**Total Marks:** 3", md_output)
         self.assertIn("## Topic: Topic B", md_output)
-        self.assertIn("### Question 1) (Subtopic: Cell Structure)", md_output)
+        self.assertIn("### Question 1)", md_output)
+        self.assertIn("* **Target Subtopic:** Cell Structure", md_output)
         self.assertIn("Figure 1 shows a cell diagram.", md_output)
         self.assertIn("* **a)** Label structure X. *(1 mark)*", md_output)
         self.assertIn("**b)** This is context for part b.", md_output)

@@ -1,0 +1,526 @@
+# Specification Content Summary: ReligiousStudies (AQA)
+
+## Exam Type: Buddhism
+
+### Topic: 3.1.1.1 Key Beliefs (Spec Code: 3.1.1.1)
+
+- The concept of Dhamma (Dharma)
+- The concept of dependent arising (paticcasamupada)
+- The Three Marks of Existence: anicca (impermanence), anatta (no fixed self), dukkha (unsatisfactoriness of life, suffering)
+- The human personality in the Theravada and Mahayana traditions
+- Theravada: the Five Aggregates (skandhas) of form, sensation, perception, mental formations, consciousness
+- Mahayana: sunyata, the possibility of attaining Buddhahood and Buddha-nature
+- Human destiny
+- Different ideals in Theravada and Mahayana traditions: Arhat and Bodhisattva ideals
+- Buddhahood and the Pure Land
+- The Buddha’s life and its significance
+- The birth of the Buddha and his life of luxury
+- The Four Sights: illness, old age, death, holy man
+- The Buddha’s ascetic life
+- The Buddha’s Enlightenment
+- The Four Noble Truths
+- Suffering (dukkha) including different types of suffering
+- The causes of suffering (samudaya): the Three Poisons, ignorance, greed and hate
+- The end of craving (tanha), interpretations of nibbana (nirvana) and Enlightenment
+- The Eightfold Path (magga) to nibbana/nirvana
+- The path as the Threefold Way: ethics (sila), meditation (samadhi) and wisdom (panna)
+
+### Topic: 3.1.1.2 Practices (Spec Code: 3.1.1.2)
+
+- The nature, use and importance of Buddhist places of worship
+- Temples
+- Shrines
+- Monasteries (viharas)
+- Halls for meditation or learning (gompas)
+- Key features including Buddha rupa, artefacts and offerings
+- Puja
+- The significance and role of puja/devotional ritual in the home and in the temple
+- Chanting as a devotional practice and as an aid to mental concentration
+- Mantra recitation
+- Use of malas
+- Meditation
+- Samatha (concentration and tranquillity) including mindfulness of breathing
+- Vipassana (insight) including zazen
+- The visualisation of Buddhas and Bodhisattvas
+- The practice and significance of different ceremonies and rituals associated with death and mourning in Theravada communities and in Japan and Tibet
+- Festivals and retreats and their importance to Buddhists in Great Britain today
+- Wesak
+- Parinirvana Day
+- Buddhist ethics
+- Kamma (karma) and rebirth
+- Compassion (karuna)
+- Loving kindness (metta)
+- The five moral precepts
+- Do not take life
+- Do not take what is not given
+- Do not misuse the senses
+- Do not speak falsehoods
+- Do not take intoxicants that cloud the mind
+- The six perfections in the Mahayanan tradition
+- Generosity
+- Morality
+- Patience
+- Energy
+- Meditation
+- Wisdom
+- How the individual develops these perfections within themselves
+
+## Exam Type: Catholic Christianity
+
+### Topic: 3.1.3.1 Beliefs and teachings (Spec Code: 3.1.3.1)
+
+- One God as a Trinity of persons: Father, Son and Holy Spirit, as expressed in the Nicene Creed
+- The scriptural origins of the Trinity and its development in the Council of Nicaea
+- Creation: Biblical accounts of creation (Genesis 1 and 2) and their significance
+- Understanding the nature of God, the dignity of human beings and humanity’s relationship with creation
+- Different Christian beliefs about creation
+- Incarnation: the belief in Jesus as incarnate Son, divine Word, both fully God and fully human
+- The scriptural origins of the Incarnation
+- Redemption: the significance of the life, death, resurrection and ascension of Jesus for Catholic beliefs about salvation and grace
+- Beliefs about life after death: resurrection, judgement, heaven, hell and purgatory
+- The meaning and significance of sacrament
+- The importance of the sacramental nature of reality
+- The names, meanings and effects of the seven sacraments
+- Baptism
+- Confirmation
+- Reconciliation
+- Anointing of the sick
+- Matrimony
+- Holy orders
+- The Eucharist
+- Its status as 'the source and summit of Christian life'
+- Different Christian views about the meaning and importance of the Eucharist
+
+### Topic: 3.1.3.2 Practices (Spec Code: 3.1.3.2)
+
+- Prayer as 'the raising of the mind and heart to God'
+- Formal prayers and informal prayer, including different views about their relative importance
+- The meaning and importance of the Lord’s Prayer
+- The role and importance of forms of popular piety including the Rosary and the Stations of the Cross
+- The role and importance of pilgrimage
+- One place of Roman Catholic pilgrimage
+- Different Christian views about the importance of pilgrimage
+- The funeral rite and its significance
+- Catholic beliefs about the essential duty to 'love our neighbour' in concrete ways locally, nationally and globally
+- Catholic social teaching including Gaudium et Spes paragraph 26
+- Catholic teaching on justice, peace and reconciliation
+- The work of Catholic agencies including CAFOD, Trocaire, Missio
+- The meaning and significance of mission and evangelism for Catholics today, globally and in Great Britain, both nationally and locally
+- The aims and importance of the Society of Saint Vincent de Paul (SVP)
+- The aims and importance of either the Corrymeela community or Pax Christi
+
+## Exam Type: Christianity
+
+### Topic: 3.1.2.1 Beliefs and teachings (Spec Code: 3.1.2.1)
+
+- The nature of God
+- God as omnipotent, loving and just, and the problem of evil and suffering
+- The oneness of God and the Trinity: Father, Son and Holy Spirit
+- Different Christian beliefs about creation including the role of Word and Spirit
+- Different Christian beliefs about the afterlife and their importance
+- Resurrection and life after death
+- Judgement, heaven and hell
+- Beliefs and teachings about the incarnation and Jesus as the Son of God
+- The crucifixion, resurrection and ascension
+- Sin, including original sin
+- The means of salvation, including law, grace and Spirit
+- The role of Christ in salvation including the idea of atonement
+
+### Topic: 3.1.2.2 Practices (Spec Code: 3.1.2.2)
+
+- Different forms of worship and their significance
+- Liturgical, non-liturgical and informal worship, including the use of the Bible
+- Private worship
+- Prayer and its significance, including the Lord’s Prayer, set prayers and informal prayer
+- The role and meaning of the sacraments
+- The meaning of sacrament
+- The sacrament of baptism and its significance for Christians
+- Infant baptism
+- Believers' baptism
+- Different beliefs about infant baptism
+- The sacrament of Holy Communion/Eucharist and its significance for Christians
+- Different ways in which Holy Communion/Eucharist is celebrated
+- Different interpretations of its meaning
+- The role and importance of pilgrimage and celebrations
+- Two contrasting examples of Christian pilgrimage: Lourdes and Iona
+- The celebrations of Christmas and Easter, including their importance for Christians in Great Britain today
+- The role of the Church in the local community, including food banks and street pastors
+- The place of mission, evangelism and Church growth
+- The importance of the worldwide Church
+- Working for reconciliation
+- How Christian churches respond to persecution
+- The work of one of the following: CAFOD, Christian Aid, Tearfund
+
+## Exam Type: Hinduism
+
+### Topic: 3.1.4.1 Beliefs and teachings (Spec Code: 3.1.4.1)
+
+- Brahman: different Hindu understandings of brahman
+- Ultimate reality as divine consciousness (nirguna) and manifestation of God in form (saguna)
+- Spiritual worlds
+- Different understandings of the three features of the divine
+- Everywhere, as non-personal (brahman)
+- Within the heart
+- Beyond, as a personal loving God
+- How the divine presents
+- The Tri-murti: Brahma, Vishnu and Shiva
+- Male and female deities, including Ganesha, Lakshmi, Hanuman, Saraswati
+- The concept of avatara, including Krishna and Rama
+- Matter (prakriti)
+- The three qualities (tri-guna)
+- Illusion (maya)
+- Cosmology
+- The cycle of four ages
+- Many worlds and their diverse inhabitants
+- The concept of atman, as individual, eternal inner self, distinct from material mind and body
+- Cycle of birth and death: samsara
+- Moral action and reaction: the law of karma
+- Types of liberation: moksha
+- Individual free will and responses to suffering
+- Knowledge and ignorance
+- Personal virtues including ahimsa, respect, empathy, mind/sense control, humility, love
+- The four aims of human life: dharma, artha, kama, moksha
+- The meaning of dharma
+- Sanatana dharma
+- Varnashrama dharma
+
+### Topic: 3.1.4.2 Practices (Spec Code: 3.1.4.2)
+
+- Places of worship and their importance: home, temple, outdoors (such as shrines), the space of the heart
+- Different forms of worship/meditation and their significance
+- Havan
+- Puja
+- Arati
+- Darshan
+- Bhajan/kirtan
+- Japa/mantra
+- Key differences in worship in Shaivism and Vaishnavism
+- Different Hindu views about the importance of worship
+- Focuses of worship and representations of the divine and their importance
+- One God (personal or non-personal)
+- The many deities, guru and other elders
+- Holy land, hills and rivers
+- Sacred plants and animals
+- The murti as a representation of God
+- Sacred festivals and their importance for Hindus in Great Britain today
+- Diwali
+- Holi
+- The four paths towards yoga (union with the divine), their differences and their importance
+- Action (karma yoga)
+- Knowledge (jnana yoga)
+- Meditation (astanga yoga)
+- Devotion (bhakti yoga)
+- Pilgrimage
+- The role of pilgrimage
+- Practices and purposes
+- Sacred sites, including Varanasi
+- Kumbh Mela
+- The work and significance of Hindu environmental projects including 'cow protection' and their significance
+- Charities that promote well-being, social inclusion and women’s rights
+
+## Exam Type: Islam
+
+### Topic: 3.1.5.1 Beliefs and teachings (Spec Code: 3.1.5.1)
+
+- The six articles of faith in Sunni Islam and five roots of Usul ad-Din in Shi’a Islam, including key similarities and differences
+- Tawhid (the Oneness of God)
+- Qur’an Surah 112
+- The nature of God: omnipotence, beneficence, mercy, fairness and justice/Adalat in Shi’a Islam
+- Different ideas about God’s relationship with the world: immanence and transcendence
+- Angels, their nature and role, including Jibril and Mika’il
+- Predestination and human freedom and its relationship to the Day of Judgement
+- Akhirah (life after death), human responsibility and accountability, resurrection, heaven and hell
+- Risalah (Prophethood) including the role and importance of Adam, Ibrahim and Muhammad
+- The holy books
+- Qur’an: revelation and authority
+- The Torah, the Psalms, the Gospel, the Scrolls of Abraham and their authority
+- The imamate in Shi'a Islam: its role and significance
+
+### Topic: 3.1.5.2 Practices (Spec Code: 3.1.5.2)
+
+- Five Pillars of Sunni Islam and the Ten Obligatory Acts of Shi’a Islam
+- The Five Pillars and jihad in both Sunni and Shi’a Islam and the additional duties of Shi’a Islam
+- Shahadah: declaration of faith and its place in Muslim practice
+- Salah and its significance
+- How and why Muslims pray including times, directions, ablution (wudu), movements (rak’ahs) and recitations
+- Salah in the home and mosque and elsewhere
+- Friday prayer: Jummah
+- Key differences in the practice of salah in Sunni and Shi’a Islam
+- Different Muslim views about the importance of prayer
+- Sawm: the role and significance of fasting during the month of Ramadan
+- Origins, duties, benefits of fasting, the exceptions and their reasons, and the Night of Power
+- Qur’an 96:1-5
+- Zakah: the role and significance of giving alms
+- Origins, how and why it is given, benefits of receipt, Khums in Shi’a Islam
+- Hajj: the role and significance of the pilgrimage to Makkah
+- Origins, how hajj is performed, the actions pilgrims perform at sites including the Ka’aba at Makkah, Mina, Arafat, Muzdalifah and their significance
+- Jihad: different understandings of jihad
+- The meaning and significance of greater and lesser jihad
+- Origins, influence and conditions for the declaration of lesser jihad
+- Festivals and commemorations and their importance for Muslims in Great Britain today
+- Id-ul-Adha
+- Id-ul-Fitr
+- Ashura
+
+## Exam Type: Judaism
+
+### Topic: 3.1.6.1 Beliefs and teachings (Spec Code: 3.1.6.1)
+
+- The nature of God
+- God as one
+- God as Creator
+- God as Law-Giver and Judge, loving and merciful
+- The divine presence (Shekhinah)
+- Beliefs about life after death, including judgement and resurrection
+- The nature and role of the Messiah, including different views on the role and importance of the Messiah
+- The Covenant and the mitzvot
+- The promised land and the Covenant with Abraham
+- Genesis 12:1-3
+- The Covenant at Sinai and its importance including the role of Moses and the Ten Commandments
+- Exodus 20:1-17
+- Key moral principles including justice, healing the world, charity and kindness to others
+- The importance of the sanctity of human life, including the concept of ‘saving a life’ (Pikuach Nefesh)
+- The relationship between free will and the 613 mitzvot
+- Mitzvot between man and God and mitzvot between man and man, including the difference between them and their importance
+
+### Topic: 3.1.6.2 Practices (Spec Code: 3.1.6.2)
+
+- The synagogue and its importance
+- The design and religious features of synagogues including bimah, aron hakodesh, ner tamid and associated practices
+- Differences between Orthodox and Reform synagogues
+- Public acts of worship including synagogue services in both Orthodox and Reform synagogues
+- The significance of prayer, including the Amidah, the standing prayer
+- Shabbat in the home and synagogue and its significance
+- Worship in the home and private prayer
+- Tenakh (the written law) and Talmud (the oral law), and their study, use and significance in daily life
+- Rituals and their significance
+- Ceremonies associated with birth including Brit Milah
+- Bar and Bat Mitzvah
+- The marriage ceremony
+- Mourning rituals
+- Dietary laws and their significance, including different Jewish views about their importance
+- Kosher and trefah
+- Separation of milk and meat
+- Festivals and their importance for Jews in Great Britain today
+- Rosh Hashanah and Yom Kippur
+- Pesach
+
+## Exam Type: Sikhism
+
+### Topic: 3.1.7.1 Beliefs and teachings (Spec Code: 3.1.7.1)
+
+- The nature of God as expressed in the Mool Mantra
+- The content and significance of the Mool Mantra
+- Guru Granth Sahib (GGS) 1a
+- God as Creator, including different aspects of God’s relationship with creation
+- God shown in and through the universe
+- God as separate from the universe
+- The nature of human life as an opportunity to unite with God
+- The development of Sikh virtues such as wisdom, truthful living, justice, temperance, self-control, patience, courage, humility, contentment
+- Beliefs in karma and rebirth, and the aim of mukti
+- The meaning of mukti, including the different aspects of mukti – positive and negative
+- The five stages of liberation (five khands) and barriers to mukti
+- Illusion, self-centredness, lust, anger, greed, worldly attachment, pride
+- The importance of being gurmukh (God-centred) rather than manmukh (man-centred)
+- The elimination of pride or ego (haumai)
+- Belief in the oneness of humanity and in the equality of all, including complete equality of women with men
+- The expression of the equality of all in the stories of the lives of Gurus, including Guru Nanak and Guru Gobind Singh
+- The expression of the equality of all in the Guru Granth Sahib
+- The expression of the equality of all in Sikhism today
+- Sewa: the importance and priority of service to others
+- Physical (tan), mental (man) and material (dhan) service
+- The role and importance of the sangat (religious community)
+
+### Topic: 3.1.7.2 Practices (Spec Code: 3.1.7.2)
+
+- Religious features of the gurdwara: design, furniture, and artefacts
+- The practices associated with these features and their importance, including the palki and takht
+- The role of the gurdwara within the Sikh community
+- The role of prayer in the home
+- GGS 305:4
+- The role and importance of the akhand path
+- The meaning and significance of langar as an expression of sewa
+- The significance of meditating on the name of God (nam japna) in daily life and in the gurdwara
+- Festivals and their importance for Sikhs in Great Britain today
+- Vaisakhi (Baisakhi)
+- Divali
+- Gurpurbs, including Guru Nanak’s birthday and differences in the way gurpurbs are celebrated in India and Great Britain
+- The importance of visiting Sikh historical gurdwaras, including the Golden Temple (Harimandir Sahib) in Amritsar
+- Birth and naming ceremonies including their meaning and significance
+- The initiation ceremony (Amrit Sanskar)
+- The meaning and importance of the Khalsa and the five Ks
+- The different perspectives of sahajdhari and amritdhari Sikhs
+- The significance and use of the names Singh and Kaur
+
+## Exam Type: Themes
+
+### Topic: 3.2.1.1 Theme A: Relationships and families (Spec Code: 3.2.1.1)
+
+- Contraception
+- Sexual relationships before marriage
+- Homosexual relationships
+- Human sexuality including heterosexual and homosexual relationships
+- Sexual relationships before and outside of marriage
+- Contraception and family planning
+- The nature and purpose of marriage
+- Same-sex marriage and cohabitation
+- Divorce, including reasons for divorce, and remarrying
+- Ethical arguments related to divorce, including those based on the sanctity of marriage vows and compassion
+- The nature of families, including the role of parents and children, extended families and the nuclear family
+- The purpose of families, including procreation, stability and the protection of children, educating children in a faith
+- Contemporary family issues including same-sex parents and polygamy
+- The roles of men and women
+- Gender equality
+- Gender prejudice and discrimination, including examples
+
+### Topic: 3.2.1.2 Theme B: Religion and life (Spec Code: 3.2.1.2)
+
+- Abortion
+- Euthanasia
+- Animal experimentation
+- The origins of the universe
+- Religious teachings about the origins of the universe, and different interpretations of these
+- The relationship between scientific views, such as the Big Bang theory, and religious views
+- The value of the world and the duty of human beings to protect it
+- Religious teaching about stewardship, dominion, responsibility, awe and wonder
+- The use and abuse of the environment, including the use of natural resources and pollution
+- The use and abuse of animals, including animal experimentation and the use of animals for food
+- The origins of life
+- Religious teachings about the origins of human life, and different interpretations of these
+- The relationship between scientific views, such as evolution, and religious views
+- The concepts of sanctity of life and the quality of life
+- Abortion, including situations when the mother's life is at risk
+- Ethical arguments related to abortion, including those based on the sanctity of life and quality of life
+- Euthanasia
+- Beliefs about death and an afterlife, and their impact on beliefs about the value of human life
+
+### Topic: 3.2.1.3 Theme C: The existence of God and revelation (Spec Code: 3.2.1.3)
+
+- Visions
+- Miracles
+- Nature as general revelation
+- The Design argument, including its strengths and weaknesses
+- The First Cause argument, including its strengths and weaknesses
+- The argument from miracles, including its strengths and weaknesses, and one example of a miracle
+- Evil and suffering as an argument against the existence of God
+- Arguments based on science against the existence of God
+- Special revelation as a source of knowledge about the divine including visions and one example of a vision
+- Enlightenment as a source of knowledge about the divine
+- General revelation: nature and scripture as a way of understanding the divine
+- Different ideas about the divine from these sources
+- Omnipotent and omniscient
+- Personal and impersonal
+- Immanent and transcendent
+- The value of general and special revelation and enlightenment as sources of knowledge about the divine
+- The problems of different ideas about the divine arising from these experiences
+- Alternative explanations for the experiences, and the possibility that the people who claimed to have them were lying or mistaken
+
+### Topic: 3.2.1.4 Theme D: Religion, peace and conflict (Spec Code: 3.2.1.4)
+
+- Violence
+- Weapons of mass destruction
+- Pacifism
+- Peace
+- Justice
+- Forgiveness
+- Reconciliation
+- Violence, including violent protest
+- Terrorism
+- Reasons for war, including greed, self-defence and retaliation
+- The just war theory, including the criteria for a just war
+- Holy war
+- Religion and belief in 21st century conflict
+- Religion and belief as a cause of war and violence in the contemporary world
+- Nuclear weapons, including nuclear deterrence
+- The use of weapons of mass destruction
+- Religion and peace-making in the contemporary world including the work of individuals influenced by religious teaching
+- Religious responses to the victims of war including the work of one present day religious organisation
+
+### Topic: 3.2.1.5 Theme E: Religion, crime and punishment (Spec Code: 3.2.1.5)
+
+- Corporal punishment
+- Death penalty
+- Forgiveness
+- Good and evil intentions and actions, including whether it can ever be good to cause suffering
+- Reasons for crime, including poverty and upbringing, mental illness and addiction, greed and hate, opposition to an unjust law
+- Views about people who break the law for these reasons
+- Views about different types of crime, including hate crimes, theft and murder
+- The aims of punishment, including retribution, deterrence and reformation
+- The treatment of criminals, including prison, corporal punishment and community service
+- Forgiveness
+- The death penalty
+- Ethical arguments related to the death penalty, including those based on the principle of utility and sanctity of life
+
+### Topic: 3.2.1.6 Theme F: Religion, human rights and social justice (Spec Code: 3.2.1.6)
+
+- Status of women in religion
+- The uses of wealth
+- Freedom of religious expression
+- Prejudice and discrimination in religion and belief, including the status and treatment within religion of women and homosexuals
+- Issues of equality, freedom of religion and belief including freedom of religious expression
+- Human rights and the responsibilities that come with rights, including the responsibility to respect the rights of others
+- Social justice
+- Racial prejudice and discrimination
+- Ethical arguments related to racial discrimination, including positive discrimination, including those based on the ideals of equality and justice
+- Wealth, including the right attitude to wealth and the uses of wealth
+- The responsibilities of wealth, including the duty to tackle poverty and its causes
+- Exploitation of the poor including fair pay, excessive interest on loans and people-trafficking
+- The responsibilities of those living in poverty to help themselves overcome the difficulties they face
+- Charity, including issues related to giving money to the poor
+
+### Topic: 3.2.2.1 Theme G: St Mark’s Gospel: the life of Jesus (Spec Code: 3.2.2.1)
+
+- John’s preparation for Jesus’ ministry: 1:1–8
+- Jesus’ baptism and temptation: 1:9–13
+- The paralysed man: 2:1–12
+- Jairus’ daughter: 5:21–24a, 35–43
+- The rejection at Nazareth: 6:1–6
+- The feeding of the five thousand: 6:30–44
+- The conversation at Caesarea Philippi: 8:27–33
+- The transfiguration of Jesus: 9:2–9
+- Jesus’ passion prediction: 10:32–34
+- The request of James and John: 10:35–45
+- Bartimaeus: 10:46–52
+- The entry into Jerusalem: 11:1–11
+- The Last Supper: 14:12–26
+- Jesus in Gethsemane: 14:32–52
+- The trial before the Jewish authorities: 14:53, 57–65
+- The trial before Pilate: 15:1–15
+- The crucifixion and burial: 15:21–47
+- The empty tomb: 16:1–8
+- The titles Son of Man, Son of God, Christ (Messiah) and Son of David
+- Meaning of these titles for 1st century Jews and Jesus
+- The significance for 21st century Christians of Jesus’ understanding of these titles
+- St Mark’s portrayal of Jesus as a teacher and miracle worker
+- Contrasting views on the historicity of the miracle stories
+- Differing beliefs about the meaning of Jesus’ words and actions at the Last Supper
+- Differing beliefs about the significance of Jesus' death and resurrection, and different explanations given for the empty tomb
+- Differing views on the authority of St Mark’s Gospel relating to the life of Jesus in relation to secular sources of contemporary authority
+
+### Topic: 3.2.2.2 Theme H: St Mark’s Gospel as a source of religious, moral and spiritual truths (Spec Code: 3.2.2.2)
+
+- Parable of the sower: 4:1–9, 14–20
+- Parable of the growing seed: 4:26–29
+- Parable of the mustard seed: 4:30–32
+- Jesus and the children: 10:13–16
+- The rich man: 10:17–27
+- The greatest commandment: 12:28–34
+- The man with leprosy: 1:40–45
+- The call of Levi: 2:13–17
+- The Greek (Syro-Phoenician) woman’s daughter: 7:24–30
+- The epileptic (demon-possessed) boy: 9:14–29
+- The widow at the treasury: 12:41–44
+- The anointing at Bethany: 14:1–9
+- The call of the first disciples: 1:16–20
+- The woman with a haemorrhage: 5:24b–34
+- The mission of the Twelve: 6:7–13
+- The cost and rewards of discipleship: 8:34–38; 10:28–31
+- Peter’s denials: 14:27–31, 66–72
+- The commission and ascension: 16:14–20
+- The significance and importance for Jesus, for the people of his day and for people in the 21st century, of key events in the life of Jesus recorded in St Mark
+- Different ways in which the Kingdom of God might be understood, including as a present reality and a future hope, and as a personal inner state and a community
+- Reasons for 1st century attitudes and those of Jesus to those disregarded by society
+- The significance and importance for Christians of Jesus’ attitudes to those disregarded by the society of his day
+- Different views on the significance and importance for Jesus’ disciples and for 21st century Christians of discipleship as seen in incidents relating to Jesus’ disciples and in Jesus’ teaching
+- Different views on the nature and importance of faith as seen in St Mark’s Gospel
+- Differing views on the authority of Jesus’ teaching as recorded by St Mark in relation to secular sources of contemporary authority

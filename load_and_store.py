@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import re
-from typing import Optional
+from typing import Any, Optional
 
 from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
@@ -26,6 +26,215 @@ DOC_TYPE_KEYS = {
     "markschemes": "ms",
     "questionpapers": "spec",
 }
+
+
+def clean_ingested_question_text(text: str) -> str:
+    """Clean raw question content during ingestion by removing OCR glitches, margins, and exam boilerplate."""
+    if not text:
+        return ""
+
+    cleaned = text
+
+    # Remove margin instructions & boilerplate with OCR spacing glitches
+    cleaned = re.sub(r"(?i)DO\s*NO?\s*T?\s*WRITE?\s*IN?\s*THIS?\s*(?:AREA|MARGIN|PAGE).*", "", cleaned)
+    cleaned = re.sub(r"(?i)DO\s*NOT\s*WRITE\s*ON\s*THIS\s*PAGE.*", "", cleaned)
+    cleaned = re.sub(r"(?i)\(?\s*Total\s+for\s+Question.*", "", cleaned)
+    cleaned = re.sub(r"(?i)\(?\s*Total\s+\d+\s+marks?\s*\)?", "", cleaned)
+
+    # Remove exam paper instructions & boilerplate
+    cleaned = re.sub(r"(?i)Answer\s+ALL\s+questions.*", "", cleaned)
+    cleaned = re.sub(r"(?i)Write\s+your\s+answers\s+in\s+the\s+spaces\s+provided.*", "", cleaned)
+    cleaned = re.sub(r"(?i)Some\s+questions\s+must\s+be\s+answered\s+with\s+a\s+cross.*", "", cleaned)
+    cleaned = re.sub(r"(?i)If\s+you\s+change\s+your\s+mind.*", "", cleaned)
+    cleaned = re.sub(r"(?i)mark\s+your\s+new\s+answer.*", "", cleaned)
+    cleaned = re.sub(r"(?i)\bTurn\s+over\b(?:\s+for\s+next\s+question)?", "", cleaned)
+    cleaned = re.sub(r"(?i)\bBLANK\s+PAGE\b", "", cleaned)
+    cleaned = re.sub(r"(?i)Pearson\s+Edexcel.*", "", cleaned)
+    cleaned = re.sub(r"\b[A-Z]\d{4,}[A-Z0-9]*\b", "", cleaned)
+    cleaned = re.sub(r"\*\s*[A-Z0-9]{5,}\s*\*", "", cleaned)
+
+    # Remove long dotted or underlined prompt lines
+    cleaned = re.sub(r"\.{3,}", "", cleaned)
+    cleaned = re.sub(r"_{3,}", "", cleaned)
+    cleaned = re.sub(r"(?m)^\s*\(\d+\)\s*$", "", cleaned)
+
+    # Collapse multiple blank lines & spaces
+    lines = [re.sub(r"[ \t]+", " ", line).strip() for line in cleaned.splitlines() if line.strip()]
+
+    # Filter out standalone page number lines or single digits
+    filtered_lines = []
+    for line in lines:
+        if re.match(r"^\d+$", line) or re.match(r"(?i)^Page\s+\d+$", line):
+            continue
+        filtered_lines.append(line)
+
+    return "\n".join(filtered_lines)
+
+
+def load_specification_summary(subject: str, examiner: str) -> dict:
+    """Load pre-generated specification summary JSON for a subject/examiner."""
+    if not subject or not examiner:
+        return {}
+    path = f"data/{subject}/{examiner}/{subject}-{examiner}-specification_summary.json"
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning("Could not read specification summary JSON %s: %s", path, e)
+    return {}
+
+
+def classify_question_with_llm(
+    llm: Optional[Any],
+    spec_summary: dict,
+    question_content: str,
+    file_topic: str,
+    exam_type: str = "",
+    is_parent: bool = False,
+    sub_questions: Optional[list[dict]] = None
+) -> tuple[str, Any]:
+    """Classify 1 question (basic or parent) using LLM and specification summary hierarchy.
+
+    Returns:
+        For basic question: tuple of (topic_name, subtopic_name)
+        For parent question: tuple of (topic_name, list_of_subtopic_names_for_sub_questions)
+    """
+    if not spec_summary or not llm:
+        return file_topic, (file_topic if not is_parent else [file_topic] * len(sub_questions or []))
+
+    allowed_topics_map: dict[str, list[str]] = {}
+    exam_types_data = spec_summary.get("exam_types", [])
+
+    target_et = exam_type.strip().lower() if exam_type else ""
+    matching_et_item = None
+    for et_item in exam_types_data:
+        if target_et and target_et in str(et_item.get("exam_type", "")).strip().lower():
+            matching_et_item = et_item
+            break
+
+    if not matching_et_item and exam_types_data:
+        matching_et_item = exam_types_data[0]
+
+    if matching_et_item:
+        for t_item in matching_et_item.get("topics", []):
+            top_name = t_item.get("topic", "").strip()
+            subs = t_item.get("subtopics", [])
+            allowed_topics_map[top_name] = [str(s).strip() for s in subs]
+
+    if not allowed_topics_map:
+        return file_topic, (file_topic if not is_parent else [file_topic] * len(sub_questions or []))
+
+    hierarchy_str = json.dumps(allowed_topics_map, indent=2, ensure_ascii=False)
+
+    if not is_parent:
+        prompt = f"""You are an expert GCSE exam classifier.
+Analyze the question below and assign its official Topic and Subtopic.
+
+Allowed Topics & Subtopics Hierarchy:
+{hierarchy_str}
+
+Question Content:
+{question_content[:3000]}
+
+You MUST choose EXACTLY ONE topic from the allowed topics list, and EXACTLY ONE subtopic under that chosen topic.
+
+Return strictly a JSON object:
+{{
+  "topic": "Selected Topic Name",
+  "subtopic": "Selected Subtopic Name"
+}}
+Do not return any markdown fences or explanation, return only raw JSON."""
+
+        try:
+            res = llm.invoke_json(prompt)
+            chosen_top = str(res.get("topic", "")).strip()
+            chosen_sub = str(res.get("subtopic", "")).strip()
+
+            if chosen_top in allowed_topics_map:
+                if chosen_sub in allowed_topics_map[chosen_top]:
+                    return chosen_top, chosen_sub
+                elif allowed_topics_map[chosen_top]:
+                    return chosen_top, allowed_topics_map[chosen_top][0]
+                return chosen_top, chosen_top
+
+            for valid_top, valid_subs in allowed_topics_map.items():
+                if valid_top.lower() in chosen_top.lower() or chosen_top.lower() in valid_top.lower():
+                    chosen_sub_final = valid_subs[0] if valid_subs else valid_top
+                    return valid_top, chosen_sub_final
+
+        except Exception as e:
+            logger.warning("LLM classification failed for basic question: %s", e)
+
+        default_top = list(allowed_topics_map.keys())[0]
+        default_sub = allowed_topics_map[default_top][0] if allowed_topics_map[default_top] else default_top
+        return default_top, default_sub
+
+    else:
+        sq_descriptions = []
+        for sq in (sub_questions or []):
+            lbl = sq.get("label", "")
+            txt = sq.get("text", "") or sq.get("context", "")
+            sq_descriptions.append(f"- {lbl} {txt[:500]}")
+        sq_text_block = "\n".join(sq_descriptions)
+
+        prompt = f"""You are an expert GCSE exam classifier.
+Analyze the parent question and its sub-parts below and assign its official Topic and Subtopics.
+
+Allowed Topics & Subtopics Hierarchy:
+{hierarchy_str}
+
+Parent Question Context:
+{question_content[:2000]}
+
+Sub-questions:
+{sq_text_block}
+
+Choose EXACTLY ONE overall topic for the parent question from the allowed topics list.
+For each sub-question, choose EXACTLY ONE subtopic under that chosen topic.
+
+Return strictly a JSON object:
+{{
+  "topic": "Selected Topic Name",
+  "subtopics": [
+    {{"label": "a)", "subtopic": "Subtopic Name for a)"}}
+  ]
+}}
+Do not return any markdown fences or explanation, return only raw JSON."""
+
+        try:
+            res = llm.invoke_json(prompt)
+            chosen_top = str(res.get("topic", "")).strip()
+            raw_subs = res.get("subtopics", [])
+
+            valid_top = list(allowed_topics_map.keys())[0]
+            if chosen_top in allowed_topics_map:
+                valid_top = chosen_top
+            else:
+                for t_key in allowed_topics_map.keys():
+                    if t_key.lower() in chosen_top.lower() or chosen_top.lower() in t_key.lower():
+                        valid_top = t_key
+                        break
+
+            allowed_subs = allowed_topics_map.get(valid_top, [valid_top])
+            subtopic_list = []
+            if isinstance(raw_subs, list):
+                for item in raw_subs:
+                    if isinstance(item, dict) and item.get("subtopic"):
+                        s_name = str(item.get("subtopic")).strip()
+                        subtopic_list.append(s_name if s_name in allowed_subs else (allowed_subs[0] if allowed_subs else valid_top))
+
+            while len(subtopic_list) < len(sub_questions or []):
+                subtopic_list.append(allowed_subs[0] if allowed_subs else valid_top)
+
+            return valid_top, subtopic_list
+
+        except Exception as e:
+            logger.warning("LLM classification failed for parent question: %s", e)
+
+        default_top = list(allowed_topics_map.keys())[0]
+        default_subs = allowed_topics_map.get(default_top, [default_top])
+        return default_top, [default_subs[0] if default_subs else default_top] * len(sub_questions or [])
 
 
 class PdfFile:
@@ -70,9 +279,7 @@ class PdfFile:
         self.question_pattern = self.config.question_pattern
 
     def extract_mark(self, text: str, pattern: str) -> Optional[int]:
-        """Extract a mark value from text using a regex pattern.
-
-        Finds the last match in the text and extracts the numeric value.
+        """Extract a mark value from text using a regex pattern with fallbacks.
 
         Args:
             text: The text to search.
@@ -81,13 +288,34 @@ class PdfFile:
         Returns:
             The extracted mark as an integer, or None if not found.
         """
-        regex = re.compile(pattern)
-        matches = list(regex.finditer(text))
-        if matches:
-            last_match = matches[-1]
-            if last_match.groups():
-                return int(last_match.group(1))
-            return int(last_match.group())
+        if not text:
+            return None
+
+        # 1. Try subject-configured primary pattern
+        try:
+            regex = re.compile(pattern)
+            matches = list(regex.finditer(text))
+            if matches:
+                last_match = matches[-1]
+                if last_match.groups():
+                    return int(last_match.group(1))
+                return int(last_match.group())
+        except (ValueError, TypeError, re.error):
+            pass
+
+        # 2. Try common mark pattern fallbacks: (1), (2), [2 marks], [2]
+        fallback_patterns = [
+            r"\((\d{1,2})\)",
+            r"\[\s*(\d{1,2})\s*(?:marks?)?\s*\]",
+            r"(?i)(\d{1,2})\s*marks?"
+        ]
+        for fb_pat in fallback_patterns:
+            fb_matches = list(re.finditer(fb_pat, text))
+            if fb_matches:
+                try:
+                    return int(fb_matches[-1].group(1))
+                except (ValueError, TypeError):
+                    pass
         return None
 
     def add_metadata(self, chunks: list[Document]) -> list[Document]:
@@ -323,52 +551,6 @@ class PdfFile:
 
         return structure
 
-    def classify_question_topic_and_subtopic(
-        self, question_text: str, file_topic: str
-    ) -> tuple[str, str]:
-        """Classify a question into its specification topic first, and then subtopic.
-
-        Args:
-            question_text: Full text of the question.
-            file_topic: Default topic derived from filename metadata.
-
-        Returns:
-            Tuple of (classified_topic, classified_subtopic).
-        """
-        spec_structure = self._get_specification_structure()
-        if not spec_structure:
-            return file_topic, file_topic
-
-        # Step 1: Define Topic using specification structure
-        matched_topic = file_topic
-        for topic_name in spec_structure.keys():
-            if topic_name.lower() in file_topic.lower() or file_topic.lower() in topic_name.lower():
-                matched_topic = topic_name
-                break
-
-        if matched_topic == file_topic:
-            best_topic_score = 0
-            for topic_name in spec_structure.keys():
-                score = sum(1 for word in topic_name.lower().split() if len(word) > 3 and word in question_text.lower())
-                if score > best_topic_score:
-                    best_topic_score = score
-                    matched_topic = topic_name
-
-        # Step 2: Define Subtopic under the identified Topic
-        subtopics = spec_structure.get(matched_topic, [])
-        matched_subtopic = matched_topic
-
-        if subtopics:
-            best_subtopic_score = -1
-            for subtopic_name in subtopics:
-                keywords = [w for w in re.findall(r'\w+', subtopic_name.lower()) if len(w) > 3]
-                score = sum(1 for kw in keywords if kw in question_text.lower())
-                if score > best_subtopic_score:
-                    best_subtopic_score = score
-                    matched_subtopic = subtopic_name
-
-        return matched_topic, matched_subtopic
-
     def process_questions(
         self, questions: list[str], topic: str, exam: str
     ) -> list[dict]:
@@ -393,16 +575,23 @@ class PdfFile:
 
         sub_q_pat = self.sub_question_pattern
         sub_sub_q_pat = self.sub_sub_question_pattern
+        spec_summary = load_specification_summary(getattr(self, "subject", ""), getattr(self, "examiner", ""))
+        classifier_llm = None
+        if spec_summary:
+            try:
+                from llm_client import LLMClient
+                model_name = getattr(self.config, "LLM_MODEL", "gpt-5.4-mini")
+                classifier_llm = LLMClient(model=model_name)
+            except Exception as e:
+                logger.warning("Could not initialize LLMClient for question classification: %s", e)
 
         for question in questions:
-            question_stripped = question.strip()
-            if not question_stripped:
+            question_cleaned = clean_ingested_question_text(question)
+            if not question_cleaned:
                 continue
 
-            # Classify official specification topic first, then subtopic
-            classified_topic, classified_subtopic = self.classify_question_topic_and_subtopic(
-                question_stripped, topic
-            )
+            # Extract raw basic mark before clean text strips mark numbers
+            raw_basic_mark = self.extract_mark(question, self.marks_pattern)
 
             has_sub = False
             sub_questions_list = []
@@ -413,7 +602,7 @@ class PdfFile:
                 splits = re.split(sub_q_pat, question)
                 if len(splits) > 1:
                     has_sub = True
-                    parent_description = splits[0].strip()
+                    parent_description = clean_ingested_question_text(splits[0])
                     sub_question_texts = splits[1:]
 
                     for idx, sq_text in enumerate(sub_question_texts):
@@ -427,19 +616,20 @@ class PdfFile:
                             ss_splits = re.split(sub_sub_q_pat, sq_text)
                             if len(ss_splits) > 1:
                                 has_sub_sub = True
-                                sq_intro = ss_splits[0].strip()
+                                sq_intro = clean_ingested_question_text(ss_splits[0])
                                 sub_sub_texts = ss_splits[1:]
 
                         if has_sub_sub:
                             sub_sub_list = []
                             sub_sub_structure = []
                             for ss_idx, ss_text in enumerate(sub_sub_texts):
-                                ss_marks = self.extract_mark(ss_text, self.marks_pattern)
+                                ss_marks = self.extract_mark(ss_text, self.marks_pattern) or 1
+                                ss_clean = clean_ingested_question_text(ss_text)
                                 r_label = f"{romans[ss_idx]})"
                                 sub_sub_structure.append(ss_marks)
                                 sub_sub_list.append({
                                     "label": r_label,
-                                    "text": ss_text.strip(),
+                                    "text": ss_clean,
                                     "marks": ss_marks
                                 })
                             question_structure.append(sub_sub_structure)
@@ -449,23 +639,49 @@ class PdfFile:
                                 "sub_parts": sub_sub_list
                             })
                         else:
-                            sq_marks = self.extract_mark(sq_text, self.marks_pattern)
+                            sq_marks = self.extract_mark(sq_text, self.marks_pattern) or 1
+                            sq_clean = clean_ingested_question_text(sq_text)
                             question_structure.append(sq_marks)
                             sub_questions_list.append({
                                 "label": label,
-                                "text": sq_text.strip(),
+                                "text": sq_clean,
                                 "marks": sq_marks
                             })
 
             meta_dict = getattr(self, "meta_data", {})
             exam_type = meta_dict.get("exam_type", getattr(self, "exam_type_override", ""))
+
+            # Classify using LLM and specification summary
             if has_sub:
+                classified_topic, subtopic_names = classify_question_with_llm(
+                    classifier_llm, spec_summary, parent_description or question_cleaned, topic, exam_type, is_parent=True, sub_questions=sub_questions_list
+                )
+                for idx, sq_part in enumerate(sub_questions_list):
+                    sq_part["subtopic"] = subtopic_names[idx] if idx < len(subtopic_names) else (subtopic_names[0] if subtopic_names else classified_topic)
+                classified_subtopic = subtopic_names[0] if isinstance(subtopic_names, list) and subtopic_names else classified_topic
+            else:
+                classified_topic, classified_subtopic = classify_question_with_llm(
+                    classifier_llm, spec_summary, question_cleaned, topic, exam_type, is_parent=False
+                )
+
+            if has_sub:
+                # Calculate total parent question marks from question structure
+                flat_marks = []
+                def _flatten(item):
+                    if isinstance(item, list):
+                        for sub in item:
+                            _flatten(sub)
+                    elif isinstance(item, int) and item > 0:
+                        flat_marks.append(item)
+                _flatten(question_structure)
+                parent_total_marks = sum(flat_marks) if flat_marks else None
+
                 questions_info.append({
                     "type": "parent_question",
                     "topic": classified_topic,
                     "subtopic": classified_subtopic,
-                    "marks": None,
-                    "question_content": question,
+                    "marks": parent_total_marks,
+                    "question_content": question_cleaned,
                     "parent_question_structure": question_structure,
                     "parent_description": parent_description,
                     "sub_questions": sub_questions_list,
@@ -473,13 +689,13 @@ class PdfFile:
                     "exam_type": exam_type
                 })
             else:
-                marks = self.extract_mark(question, self.marks_pattern)
+                marks = raw_basic_mark or 1
                 questions_info.append({
                     "type": "basic_question",
                     "topic": classified_topic,
                     "subtopic": classified_subtopic,
                     "marks": marks,
-                    "question_content": question,
+                    "question_content": question_cleaned,
                     "parent_question_structure": None,
                     "exam": exam,
                     "exam_type": exam_type
@@ -530,6 +746,57 @@ class VectorStore:
         logger.info(
             "Added %d chunks to %s", len(chunks), self.vector_database_name
         )
+
+    def dump_database_to_string(self, subject: str, examiner: str) -> str:
+        """Export the full vector database contents as a human-readable text string."""
+        if not os.path.exists(self.vector_database_name):
+            return f"Vector database '{self.vector_database_name}' does not exist."
+
+        db = FAISS.load_local(
+            self.vector_database_name,
+            self.embedding_model,
+            allow_dangerous_deserialization=True,
+        )
+        all_docs = list(db.docstore._dict.values())
+
+        lines = [
+            "=" * 80,
+            f"VECTOR DATABASE CONTENTS: {subject} ({examiner})",
+            f"Database Path: {self.vector_database_name}",
+            f"Total Ingested Document Chunks: {len(all_docs)}",
+            "=" * 80,
+            ""
+        ]
+
+        for idx, doc in enumerate(all_docs, start=1):
+            meta = doc.metadata or {}
+            doc_type = meta.get("type") or meta.get("doc_type") or "Chunk"
+            q_type = meta.get("q_type") or meta.get("type", "")
+            topic = meta.get("topic", "N/A")
+            subtopic = meta.get("subtopic", "N/A")
+            exam_type = meta.get("exam_type", "N/A")
+            marks = meta.get("marks", "N/A")
+            exam = meta.get("exam", "N/A")
+
+            lines.append("-" * 80)
+            lines.append(f"DOCUMENT #{idx}")
+            lines.append(f"Document Type: {doc_type} | Question Type: {q_type}")
+            lines.append(f"Subject: {subject} | Examiner: {examiner} | Exam Type: {exam_type} | Exam Period: {exam}")
+            lines.append(f"Topic: {topic}")
+            lines.append(f"Subtopic: {subtopic}")
+            lines.append(f"Marks: {marks}")
+
+            if "parent_question_structure" in meta:
+                lines.append(f"Parent Question Structure: {meta['parent_question_structure']}")
+            if "sub_questions" in meta:
+                lines.append(f"Sub Questions JSON: {meta['sub_questions']}")
+
+            lines.append("\n[Page Content]:")
+            lines.append(doc.page_content.strip() if doc.page_content else "(empty)")
+            lines.append("-" * 80)
+            lines.append("")
+
+        return "\n".join(lines)
 
 
 class DatabaseManager:

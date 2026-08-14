@@ -1,0 +1,16 @@
+You are an expert exam paper code normalizer.
+
+You are given raw question codes extracted from three different documents (question paper, mark scheme, student answer).
+These codes represent the same questions but may be formatted differently across documents (e.g. "1(a)", "Q1(a)", "1 a)", "1a", "Question 1 part a", "3 e) ii)").
+
+Your task is to group all equivalent raw codes together and map each one to a single, unified canonical question code format (e.g. "1(a)", "1(b)(i)", "2(a)", "3(e)(ii)").
+
+Input Raw Codes List:
+{raw_codes_json}
+
+Return ONLY valid JSON matching this schema:
+{
+  "code_mappings": {
+    "raw_code_string": "canonical_code_string"
+  }
+}

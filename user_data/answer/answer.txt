@@ -1,3 +1,0 @@
-In the lytic pathway, a virus attaches to a host cell and injects its genetic material. The viral genes take over the cell’s machinery, making it produce many new virus particles. The host cell then bursts open (lysis), releasing the new viruses.
-
-This causes infection to spread because the released viruses infect nearby cells, repeat the same cycle, and rapidly increase in number. Across a population, viruses can then pass from one person to another, so more individuals become infected.
