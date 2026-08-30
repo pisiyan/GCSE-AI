@@ -198,6 +198,13 @@ class GcseAssistant:
                         q_dict["sub_questions"] = json.loads(q_dict["sub_questions"])
                     except json.JSONDecodeError:
                         logger.error("Failed to decode sub_questions: %s", q_dict["sub_questions"])
+
+                # De-serialize image_paths
+                if "image_paths" in q_dict and isinstance(q_dict["image_paths"], str):
+                    try:
+                        q_dict["image_paths"] = json.loads(q_dict["image_paths"])
+                    except json.JSONDecodeError:
+                        logger.error("Failed to decode image_paths: %s", q_dict["image_paths"])
                 
                 questions.append(q_dict)
 
@@ -294,6 +301,28 @@ class GcseAssistant:
             structure_builder=self.structure_builder,
             user_preferences=user_preferences,
             num_questions=num_questions,
+        )
+
+    def export_exam_pdf(
+        self,
+        exam_output: dict[str, Any],
+        output_pdf_path: str,
+    ) -> str:
+        """Export a generated exam output dict into a past paper PDF document.
+
+        Args:
+            exam_output: Exam dict returned by make_exam().
+            output_pdf_path: Target output path for the PDF.
+
+        Returns:
+            Path to the generated PDF file.
+        """
+        from exam_generator import render_exam_pdf
+        return render_exam_pdf(
+            exam_output=exam_output,
+            output_pdf_path=output_pdf_path,
+            subject=self.subject,
+            examiner=self.examiner,
         )
 
     def mark_question(self) -> str:

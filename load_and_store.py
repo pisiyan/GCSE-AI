@@ -11,11 +11,10 @@ import re
 from typing import Any, Optional
 
 from langchain_core.documents import Document
-from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import CharacterTextSplitter
-
+import pymupdf
 from config import SubjectConfig, load_subject_config
 
 logger = logging.getLogger(__name__)
@@ -36,12 +35,16 @@ def clean_ingested_question_text(text: str) -> str:
     cleaned = text
 
     # Remove margin instructions & boilerplate with OCR spacing glitches
-    cleaned = re.sub(r"(?i)DO\s*NO?\s*T?\s*WRITE?\s*IN?\s*THIS?\s*(?:AREA|MARGIN|PAGE).*", "", cleaned)
-    cleaned = re.sub(r"(?i)DO\s*NOT\s*WRITE\s*ON\s*THIS\s*PAGE.*", "", cleaned)
+    cleaned = re.sub(r"(?i)DO\s*NO?\s*T?\s*WRITE?\s*(?:IN?\s*THIS?\s*(?:AREA|MARGIN|PAGE)|OUTSIDE\s*(?:THE\s*)?BOX|ON\s*THIS\s*PAGE)?.*", "", cleaned)
+    cleaned = re.sub(r"(?i)\boutside\s*the\s*box\b.*", "", cleaned)
+    cleaned = re.sub(r"(?i)\boutside\s*the\b.*", "", cleaned)
+    cleaned = re.sub(r"(?i)^\s*box\s*$", "", cleaned, flags=re.MULTILINE)
     cleaned = re.sub(r"(?i)\(?\s*Total\s+for\s+Question.*", "", cleaned)
     cleaned = re.sub(r"(?i)\(?\s*Total\s+\d+\s+marks?\s*\)?", "", cleaned)
 
-    # Remove exam paper instructions & boilerplate
+    # Remove exam paper instructions, codes, & boilerplate
+    cleaned = re.sub(r"(?i)TOTAL\s+FOR\s+PAPER\s*=\s*\d+\s*MARKS.*", "", cleaned)
+    cleaned = re.sub(r"(?i)Every\s+effort\s+has\s+been\s+made\s+to\s+contact\s+copyright\s+holders.*", "", cleaned)
     cleaned = re.sub(r"(?i)Answer\s+ALL\s+questions.*", "", cleaned)
     cleaned = re.sub(r"(?i)Write\s+your\s+answers\s+in\s+the\s+spaces\s+provided.*", "", cleaned)
     cleaned = re.sub(r"(?i)Some\s+questions\s+must\s+be\s+answered\s+with\s+a\s+cross.*", "", cleaned)
@@ -49,22 +52,30 @@ def clean_ingested_question_text(text: str) -> str:
     cleaned = re.sub(r"(?i)mark\s+your\s+new\s+answer.*", "", cleaned)
     cleaned = re.sub(r"(?i)\bTurn\s+over\b(?:\s+for\s+next\s+question)?", "", cleaned)
     cleaned = re.sub(r"(?i)\bBLANK\s+PAGE\b", "", cleaned)
+    cleaned = re.sub(r"(?i)\bExtra\s+space\b.*", "", cleaned)
+    cleaned = re.sub(r"(?i)\bEND\s+OF\s+QUESTIONS\b.*", "", cleaned)
+    cleaned = re.sub(r"(?i)\bThere\s+are\s+no\s+questions\b.*", "", cleaned)
+    cleaned = re.sub(r"(?i)\bAdditional\s+page\b.*", "", cleaned)
+    cleaned = re.sub(r"(?i)\bQuestion\s+(?:number|\d+\s+continues\s+on\s+the\s+next\s+page)\b.*", "", cleaned)
+    cleaned = re.sub(r"(?is)\bCopyright\b.*", "", cleaned)
     cleaned = re.sub(r"(?i)Pearson\s+Edexcel.*", "", cleaned)
-    cleaned = re.sub(r"\b[A-Z]\d{4,}[A-Z0-9]*\b", "", cleaned)
-    cleaned = re.sub(r"\*\s*[A-Z0-9]{5,}\s*\*", "", cleaned)
+    cleaned = re.sub(r"\b[A-Za-z0-9]+(?:/[A-Za-z0-9]+)+\b", "", cleaned)
+    cleaned = re.sub(r"\b[A-Z0-9_-]*\d[A-Z0-9_-]{5,}\b", "", cleaned)
+    cleaned = re.sub(r"\*\s*[-A-Za-z0-9_/]+\s*\*", "", cleaned)
 
-    # Remove long dotted or underlined prompt lines
-    cleaned = re.sub(r"\.{3,}", "", cleaned)
-    cleaned = re.sub(r"_{3,}", "", cleaned)
+    # Remove prompt lines and decorative margin glyphs
+    cleaned = re.sub(r"[\u2022\u25ba\u25cf\u25aa\u25ab\uf0fc]", " • ", cleaned)
+    cleaned = re.sub(r"\.{2,}", "", cleaned)
+    cleaned = re.sub(r"_{2,}", "", cleaned)
     cleaned = re.sub(r"(?m)^\s*\(\d+\)\s*$", "", cleaned)
 
     # Collapse multiple blank lines & spaces
     lines = [re.sub(r"[ \t]+", " ", line).strip() for line in cleaned.splitlines() if line.strip()]
 
-    # Filter out standalone page number lines or single digits
+    # Filter out standalone page number lines or lines with only digits/punctuation/symbols
     filtered_lines = []
     for line in lines:
-        if re.match(r"^\d+$", line) or re.match(r"(?i)^Page\s+\d+$", line):
+        if re.match(r"^[\d\.\_\-\s\u2022\u25ba\u25cf\u25aa\u25ab\*]+$", line) or re.match(r"(?i)^Page\s+\d+$", line):
             continue
         filtered_lines.append(line)
 
@@ -237,6 +248,194 @@ Do not return any markdown fences or explanation, return only raw JSON."""
         return default_top, [default_subs[0] if default_subs else default_top] * len(sub_questions or [])
 
 
+class Question:
+    """Class representing an ingested question with metadata and screenshot image path(s)."""
+
+    def __init__(
+        self,
+        question_content: str,
+        q_type: str = "basic_question",
+        topic: str = "",
+        subtopic: str = "",
+        marks: Optional[int] = None,
+        exam: str = "",
+        exam_type: str = "",
+        parent_description: Optional[str] = None,
+        parent_question_structure: Optional[Any] = None,
+        sub_questions: Optional[list] = None,
+        image_paths: Optional[list[str]] = None,
+    ):
+        self.question_content = question_content
+        self.q_type = q_type
+        self.topic = topic
+        self.subtopic = subtopic
+        self.marks = marks
+        self.exam = exam
+        self.exam_type = exam_type
+        self.parent_description = parent_description
+        self.parent_question_structure = parent_question_structure
+        self.sub_questions = sub_questions
+        self.image_paths = image_paths or []
+
+    def to_dict(self) -> dict:
+        return {
+            "question_content": self.question_content,
+            "type": self.q_type,
+            "topic": self.topic,
+            "subtopic": self.subtopic,
+            "marks": self.marks,
+            "exam": self.exam,
+            "exam_type": self.exam_type,
+            "parent_description": self.parent_description,
+            "parent_question_structure": self.parent_question_structure,
+            "sub_questions": self.sub_questions,
+            "image_paths": self.image_paths,
+        }
+
+
+def crop_question_screenshots(
+    pdf_path: str,
+    subject: str,
+    examiner: str,
+    questions_raw_text: list[str],
+) -> list[list[str]]:
+    """Render full question rectangle clips (text + diagrams) into PNG images page by page.
+
+    Uses full-text block matching to assign PyMuPDF blocks on each page to their corresponding
+    questions, calculating exact bounding box envelopes per page without empty continuations.
+
+    Args:
+        pdf_path: Path to the question paper PDF.
+        subject: Subject name (e.g. "Biology").
+        examiner: Exam board name (e.g. "Edexcel").
+        questions_raw_text: List of raw question text strings.
+
+    Returns:
+        List of lists containing PNG image file paths for each question in questions_raw_text order.
+    """
+    if not pdf_path or not os.path.exists(pdf_path) or not questions_raw_text:
+        return [[] for _ in questions_raw_text]
+
+    img_dir = os.path.normpath(f"data/{subject}/{examiner}/question_images")
+    os.makedirs(img_dir, exist_ok=True)
+    pdf_basename = os.path.splitext(os.path.basename(pdf_path))[0]
+
+    try:
+        doc = pymupdf.open(pdf_path)
+    except Exception as e:
+        logger.error("Failed to open PDF %s with PyMuPDF: %s", pdf_path, e)
+        return [[] for _ in questions_raw_text]
+
+    if len(doc) <= 1:
+        doc.close()
+        return [[] for _ in questions_raw_text]
+
+    # Load subject config regex patterns from config.py
+    cfg = load_subject_config(subject, examiner)
+    cfg_q_pat = getattr(cfg, "question_pattern", "")
+    cfg_q_regex = re.compile(cfg_q_pat, re.IGNORECASE) if cfg_q_pat else None
+    cfg_mark_pat = getattr(cfg, "mark_pattern", "")
+    cfg_mark_regex = re.compile(cfg_mark_pat, re.IGNORECASE) if cfg_mark_pat else None
+
+    all_image_paths = [[] for _ in questions_raw_text]
+    is_active = [False] * len(questions_raw_text)
+    has_been_active = [False] * len(questions_raw_text)
+
+    # Pre-normalize full question text search strings
+    clean_q_texts = [
+        re.sub(r"\s+", " ", q_text).strip()
+        for q_text in questions_raw_text
+    ]
+
+    for page_idx in range(1, len(doc)):  # Skip cover page 0
+        page = doc[page_idx]
+        page_num = page_idx + 1
+        print("\nImage ingestion for page", page_num)
+        blocks = page.get_text("blocks")
+
+        page_q_blocks = {q_i: [] for q_i in range(len(questions_raw_text))}
+
+        for b in blocks:
+            b_type = b[6] if len(b) > 6 else 0
+            b_text = re.sub(r"\s+", " ", b[4]).strip() if b_type == 0 else ""
+
+            # Skip page margin boilerplate blocks
+            if b_type == 0 and ("DO NOT WRITE IN THIS AREA" in b_text or "BLANK PAGE" in b_text or re.search(r"^\*\w+\*$", b_text)):
+                continue
+
+            # 1. If text block, check for question activations using config.question_pattern and question headers
+            if b_type == 0 and b_text and len(b_text) >= 5:
+                print("Text block found:", b_text)
+                for q_i, full_q in enumerate(clean_q_texts):
+                    if has_been_active[q_i] or not full_q:
+                        continue
+                    is_match = False
+                    q_num = q_i + 1
+                    header_pat = rf"^\s*(?:Question\s*{q_num}\b|{q_num}\s*\([a-z]\)|\b{q_num}\b\s*\([a-z]\))"
+                    if re.search(header_pat, b_text, re.IGNORECASE):
+                        is_match = True
+                    head_snippet = full_q[:60]
+                    if len(head_snippet) >= 15 and (head_snippet in b_text.strip() or b_text.strip() in head_snippet):
+                        is_match = True
+
+                    if is_match:
+                        print("Question", q_num, "found and activated.")
+                        is_active[q_i] = True
+                        has_been_active[q_i] = True
+                        break
+
+            # 2. Add block b to all currently ACTIVE questions on this page (text or image blocks)
+            for q_i in range(len(questions_raw_text)):
+                if is_active[q_i]:
+                    page_q_blocks[q_i].append(b)
+
+            # 3. Check for question deactivations using config.mark_pattern and total mark end markers
+            if b_type == 0 and b_text:
+                is_end_marker = bool(re.search(r"(?i)\(?\s*Total\s+for\s+Question", b_text))
+                if not is_end_marker and cfg_mark_regex:
+                    if cfg_mark_regex.search(b_text) and ("total" in b_text.lower() or "marks" in b_text.lower()):
+                        is_end_marker = True
+
+                if is_end_marker:
+                    for q_i in range(len(questions_raw_text)):
+                        if is_active[q_i]:
+                            print("Question", q_i+1, "deactivated.")
+                            is_active[q_i] = False
+
+        # Calculate bounding box envelope and render clip for each question with blocks on this page
+        for q_i, q_blocks in page_q_blocks.items():
+            if not q_blocks:
+                continue
+
+            min_y0 = min(b[1] for b in q_blocks)
+            max_y1 = max(b[3] for b in q_blocks)
+
+            y_top = max(0.0, min_y0 - 10.0)
+            y_bot = min(page.rect.height, max_y1 + 10.0)
+
+            if y_bot > y_top + 15.0:
+                rect = pymupdf.Rect(0.0, y_top, page.rect.width, y_bot)
+                try:
+                    img_name = f"{pdf_basename}_q{q_i + 1}_p{page_num}.png"
+                    img_path = os.path.normpath(os.path.join(img_dir, img_name))
+
+                    if os.path.exists(img_path):
+                        try:
+                            os.remove(img_path)
+                        except OSError:
+                            pass
+
+                    pix = page.get_pixmap(clip=rect, matrix=pymupdf.Matrix(2.0, 2.0))
+                    pix.save(img_path)
+                    pix = None
+                    all_image_paths[q_i].append(img_path)
+                except Exception as e:
+                    logger.warning("Failed rendering clip for Q%d p%d: %s", q_i + 1, page_num, e)
+
+    doc.close()
+    return all_image_paths
+
+
 class PdfFile:
     """Represents a PDF file for processing and question extraction.
 
@@ -272,11 +471,13 @@ class PdfFile:
             chunk_size=getattr(self.config, f"{config_prefix}_chunk_size"),
             chunk_overlap=getattr(self.config, f"{config_prefix}_chunk_overlap"),
             separator="",
+
         )
         self.marks_pattern = self.config.mark_pattern
         self.sub_question_pattern = self.config.sub_question_pattern
         self.sub_sub_question_pattern = self.config.sub_sub_question_pattern
         self.question_pattern = self.config.question_pattern
+        self.question_split_pattern = getattr(self.config, "question_split_pattern", self.config.question_pattern)
 
     def extract_mark(self, text: str, pattern: str) -> Optional[int]:
         """Extract a mark value from text using a regex pattern with fallbacks.
@@ -332,29 +533,35 @@ class PdfFile:
         return chunks
 
     def load_pdf(self) -> list[Document]:
-        """Load a PDF file and return its pages as Documents.
+        """Load a PDF file and return its pages as Documents using PyMuPDF.
 
         Returns:
             List of Document objects, one per page.
         """
-        loader = PyPDFLoader(self.name)
-        document = loader.load()
+        doc = pymupdf.open(self.name)
+        pages = []
+        for i, page in enumerate(doc):
+            pages.append(Document(page_content=page.get_text(), metadata={"page": i}))
+        doc.close()
         logger.info("Loaded PDF: %s", self.name)
-        return document
+        return pages
 
-    def pdf_to_text(self, pages: list[Document]) -> str:
+    def pdf_to_text(self, pages: Any) -> str:
         """Convert PDF pages to a single text string.
 
         Skips the first page (typically a cover page with exam board info).
 
         Args:
-            pages: List of Document objects from the PDF.
+            pages: List of Document objects or pymupdf Document.
 
         Returns:
             Concatenated text from all pages except the first.
         """
-        # Skip first page (cover page with exam board info/instructions)
-        return " ".join(pages[i + 1].page_content for i in range(len(pages) - 1))
+        if isinstance(pages, list):
+            return " ".join(pages[i].page_content for i in range(1, len(pages)))
+        elif hasattr(pages, "__len__"):
+            return " ".join(pages[i].get_text() for i in range(1, len(pages)))
+        return ""
 
     @staticmethod
     def flatten(lst: list) -> list:
@@ -374,34 +581,172 @@ class PdfFile:
                 result.append(item)
         return result
 
-    def extract_question_documents(self, content: str) -> list[Document]:
-        """Extract questions from exam paper content and return as Document chunks.
+    def extract_question_documents(self, doc_or_content: Any = None) -> list[Document]:
+        """Extract questions from exam paper PDF and return as Document chunks with images.
 
-        Parses the content into individual questions and constructs Document objects.
+        Ingests text and diagrams in a single pass over PyMuPDF blocks, using question_split_pattern
+        and mark_pattern to identify question boundaries and crop screenshots.
 
         Args:
-            content: The full text content of the exam paper.
+            doc_or_content: Optional PyMuPDF Document, file path, or content.
 
         Returns:
-            List of chunked Document objects.
+            List of chunked Document objects with metadata and image_paths.
         """
-        topic = self.meta_data["topic"]
-        exam = self.meta_data["time"]
-        questions = re.split(self.question_pattern, content)
-        question_info = self.process_questions(questions, topic, exam)
+        should_close = False
+        if doc_or_content is not None and hasattr(doc_or_content, "page_count"):
+            doc = doc_or_content
+        elif isinstance(doc_or_content, str) and os.path.exists(doc_or_content):
+            doc = pymupdf.open(doc_or_content)
+            should_close = True
+        else:
+            if not os.path.exists(self.name):
+                logger.error("PDF file not found: %s", self.name)
+                return []
+            doc = pymupdf.open(self.name)
+            should_close = True
 
-        docs = []
-        for question in question_info:
-            content_str = question.pop("question_content") or ""
-            meta = question.copy()
-            meta["q_type"] = meta.pop("type")
-            if meta.get("parent_question_structure"):
-                meta["parent_question_structure"] = json.dumps(meta["parent_question_structure"])
-            if meta.get("sub_questions"):
-                meta["sub_questions"] = json.dumps(meta["sub_questions"])
-            docs.append(Document(page_content=str(content_str), metadata=meta))
+        topic = self.meta_data.get("topic", "")
+        exam = self.meta_data.get("time", "")
+        subject = getattr(self, "subject", "")
+        examiner = getattr(self, "examiner", "")
+        pdf_basename = os.path.splitext(os.path.basename(self.name))[0]
+        img_dir = os.path.normpath(f"data/{subject}/{examiner}/question_images")
+        os.makedirs(img_dir, exist_ok=True)
 
-        logger.info("Extracted %d question chunks", len(docs))
+        split_pat = getattr(self, "question_split_pattern", self.question_pattern)
+        split_regex = re.compile(split_pat, re.IGNORECASE) if split_pat else None
+
+        questions_data: list[dict] = []
+        current_q_text_blocks: list[str] = []
+        current_q_page_blocks: dict[int, list[tuple[float, float, float, float]]] = {}
+        current_q_num = 1
+
+        def is_boilerplate_block(text: str) -> bool:
+            if not text or not text.strip():
+                return True
+            return clean_ingested_question_text(text).strip() == ""
+
+        def _finalize_current_question():
+            nonlocal current_q_text_blocks, current_q_page_blocks, current_q_num
+            if not current_q_text_blocks and not current_q_page_blocks:
+                return
+
+            raw_text = "\n".join(current_q_text_blocks).strip()
+            clean_text = clean_ingested_question_text(raw_text)
+            has_mark = self.extract_mark(raw_text, self.marks_pattern) is not None
+            if not clean_text or not has_mark:
+                current_q_text_blocks = []
+                current_q_page_blocks = {}
+                return
+
+            q_image_paths = []
+            for p_idx, p_boxes in sorted(current_q_page_blocks.items()):
+                if not p_boxes:
+                    continue
+                p_page = doc[p_idx]
+                min_y0 = min(box[1] for box in p_boxes)
+                max_y1 = max(box[3] for box in p_boxes)
+                y_top = max(0.0, min_y0 - 10.0)
+                y_bot = min(p_page.rect.height, max_y1 + 10.0)
+
+                if y_bot > y_top + 15.0:
+                    rect = pymupdf.Rect(0.0, y_top, p_page.rect.width, y_bot)
+                    try:
+                        img_name = f"{pdf_basename}_q{current_q_num}_p{p_idx + 1}.png"
+                        img_path = os.path.normpath(os.path.join(img_dir, img_name))
+                        if os.path.exists(img_path):
+                            try:
+                                os.remove(img_path)
+                            except OSError:
+                                pass
+                        pix = p_page.get_pixmap(clip=rect, matrix=pymupdf.Matrix(2.0, 2.0))
+                        pix.save(img_path)
+                        pix = None
+                        q_image_paths.append(img_path)
+                    except Exception as e:
+                        logger.warning("Failed rendering clip for Q%d p%d: %s", current_q_num, p_idx + 1, e)
+
+            questions_data.append({
+                "raw_text": raw_text,
+                "image_paths": q_image_paths,
+                "q_number": current_q_num,
+            })
+            current_q_text_blocks = []
+            current_q_page_blocks = {}
+            current_q_num += 1
+
+        start_page = 1 if len(doc) > 1 else 0
+        for page_idx in range(start_page, len(doc)):
+            page = doc[page_idx]
+            blocks = page.get_text("blocks")
+
+            for b in blocks:
+                b_type = b[6] if len(b) > 6 else 0
+                b_rect = (b[0], b[1], b[2], b[3])
+                b_text = re.sub(r"\s+", " ", b[4]).strip() if b_type == 0 else ""
+                is_end_delimiter = False
+                is_start_delimiter = False
+
+                if b_type == 0 and b_text:
+                    if re.search(r"(?i)\(?\s*Total\s+for\s+Question", b_text):
+                        is_end_delimiter = True
+                    elif split_regex and split_regex.search(b_text):
+                        if "total" in b_text.lower() and "marks" in b_text.lower():
+                            is_end_delimiter = True
+                        else:
+                            is_start_delimiter = True
+
+                if not is_end_delimiter and not is_start_delimiter:
+                    if b_type == 0 and is_boilerplate_block(b_text):
+                        continue
+
+                if is_start_delimiter:
+                    if current_q_text_blocks:
+                        _finalize_current_question()
+                    current_q_text_blocks.append(b_text)
+                    current_q_page_blocks.setdefault(page_idx, []).append(b_rect)
+                elif is_end_delimiter:
+                    current_q_text_blocks.append(b_text)
+                    current_q_page_blocks.setdefault(page_idx, []).append(b_rect)
+                    _finalize_current_question()
+                else:
+                    if b_type == 0 and b_text:
+                        current_q_text_blocks.append(b_text)
+                        current_q_page_blocks.setdefault(page_idx, []).append(b_rect)
+                    elif b_type == 1:
+                        current_q_page_blocks.setdefault(page_idx, []).append(b_rect)
+
+        _finalize_current_question()
+
+        if should_close:
+            doc.close()
+
+        docs: list[Document] = []
+        for q_item in questions_data:
+            raw_text = q_item["raw_text"]
+            img_paths = q_item["image_paths"]
+
+            q_info_list = self.process_questions([raw_text], topic, exam)
+            if not q_info_list:
+                continue
+
+            for question in q_info_list:
+                content_str = question.pop("question_content", "") or ""
+                meta = question.copy()
+                meta["q_type"] = meta.pop("type", "basic_question")
+                meta["image_paths"] = img_paths
+
+                if meta.get("parent_question_structure"):
+                    meta["parent_question_structure"] = json.dumps(meta["parent_question_structure"])
+                if meta.get("sub_questions"):
+                    meta["sub_questions"] = json.dumps(meta["sub_questions"])
+                if meta.get("image_paths"):
+                    meta["image_paths"] = json.dumps(meta["image_paths"])
+
+                docs.append(Document(page_content=str(content_str), metadata=meta))
+
+        logger.info("Extracted %d question chunks via single-loop PyMuPDF ingestion", len(docs))
         return docs
 
     def extract_ms_documents(self, content: str) -> list[Document]:
@@ -430,7 +775,7 @@ class PdfFile:
         return docs
 
     def split_document(
-        self, document: list[Document]
+        self, document: Any
     ) -> Optional[list[Document]]:
         """Split a document into chunks for vector storage.
 
@@ -438,7 +783,7 @@ class PdfFile:
         For specifications, splits into overlapping text chunks.
 
         Args:
-            document: List of Document pages from a PDF.
+            document: PyMuPDF Document or list of Document pages.
 
         Returns:
             List of chunked Documents.
@@ -446,17 +791,24 @@ class PdfFile:
         doc_type = self.meta_data.get("type", "").lower()
 
         if doc_type == "questionpaper":
-            full_text = self.pdf_to_text(document)
-            return self.extract_question_documents(full_text)
+            return self.extract_question_documents(document)
         elif doc_type == "markscheme":
             full_text = self.pdf_to_text(document)
             return self.extract_ms_documents(full_text)
         else:
-            merged_text = "\n".join(str(doc.page_content) for doc in document)
+            if isinstance(document, list):
+                merged_text = "\n".join(str(doc.page_content) for doc in document)
+            elif hasattr(document, "__len__"):
+                merged_text = "\n".join(document[i].get_text() for i in range(len(document)))
+            else:
+                merged_text = str(document)
             merged_doc = Document(page_content=merged_text)
             chunks = self.splitter.split_documents([merged_doc])
             logger.info("Split document into %d chunks", len(chunks))
             return chunks
+
+
+
 
     def _get_metadata(self) -> dict[str, str]:
         """Extract metadata from the PDF filename and folder path.
@@ -606,7 +958,7 @@ class PdfFile:
                     sub_question_texts = splits[1:]
 
                     for idx, sq_text in enumerate(sub_question_texts):
-                        label = f"{letters[idx]})"
+                        label = f"{letters[idx]})" if idx < len(letters) else f"part_{idx+1}"
                         # Check if this sub-question has sub-sub-questions
                         has_sub_sub = False
                         sub_sub_texts = []
@@ -790,6 +1142,8 @@ class VectorStore:
                 lines.append(f"Parent Question Structure: {meta['parent_question_structure']}")
             if "sub_questions" in meta:
                 lines.append(f"Sub Questions JSON: {meta['sub_questions']}")
+            if "image_paths" in meta:
+                lines.append(f"Image Paths: {meta['image_paths']}")
 
             lines.append("\n[Page Content]:")
             lines.append(doc.page_content.strip() if doc.page_content else "(empty)")
@@ -813,8 +1167,10 @@ class DatabaseManager:
             pdf: A PdfFile instance to process.
             database: A VectorStore instance to store chunks in.
         """
-        document = pdf.load_pdf()
+        document = pymupdf.open(pdf.name)
+
         chunks = pdf.split_document(document)
+        document.close()
 
         if chunks is not None:
             chunks = pdf.add_metadata(chunks)

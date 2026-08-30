@@ -13,6 +13,7 @@ class SubjectConfig:
     sub_question_pattern: Optional[str] = None
     sub_sub_question_pattern: Optional[str] = None
     question_pattern: str = r"(?i)question\s*\d+"
+    question_split_pattern: str = r"(?i)question\s*\d+"
     ms_pattern: str = r"(?i)question\s*\d+"
     ms_mark_pattern: str = r"\((\d+)\)"
     
@@ -55,6 +56,7 @@ SUBJECT_CONFIGS = {
         "sub_question_pattern": None,
         "sub_sub_question_pattern": None,
         "question_pattern": r"(?=(?:\s*\d){2}\s*\.\s*\d\b)",
+        "question_split_pattern": r"(?=(?:\s*\d){2}\s*\.\s*\d\b)",
         "ms_pattern": r"(?=(?:\s*\d){2}\s*\.\s*\d\b)",
         "ms_mark_pattern": r"[\[\(]\s*(\d{1,2})\s*(marks?)?\s*[\]\)]?",
         "spec_chunk_size": 3000,
@@ -76,6 +78,7 @@ SUBJECT_CONFIGS = {
         "sub_question_pattern": r"\(\s*[a-h]\s*\)",
         "sub_sub_question_pattern": r"\((?:i{1,3}|iv|v|vi{1,3}|ix|x)\)",
         "question_pattern": r"\(T[\s\n]*o[\s\n]*t[\s\n]*a[\s\n]*l[\s\n]* [\s\n]*f[\s\n]*o[\s\n]*r[\s\n]* [\s\n]*Q[\s\n]*u[\s\n]*e[\s\n]*s[\s\n]*t[\s\n]*i[\s\n]*o[\s\n]*n[\s\n]* [\s\n]*(\d+[\s\n]*)[\s\n]* [\s\n]*=[\s\n]* [\s\n]*(\d+[\s\n]*)[\s\n]* [\s\n]*m[\s\n]*a[\s\n]*r[\s\n]*k[\s\n]*s?\)",
+        "question_split_pattern": r"\(T[\s\n]*o[\s\n]*t[\s\n]*a[\s\n]*l[\s\n]* [\s\n]*f[\s\n]*o[\s\n]*r[\s\n]* [\s\n]*Q[\s\n]*u[\s\n]*e[\s\n]*s[\s\n]*t[\s\n]*i[\s\n]*o[\s\n]*n[\s\n]* [\s\n]*(\d+[\s\n]*)[\s\n]* [\s\n]*=[\s\n]* [\s\n]*(\d+[\s\n]*)[\s\n]* [\s\n]*m[\s\n]*a[\s\n]*r[\s\n]*k[\s\n]*s?\)",
         "ms_pattern": r"(?i)Q\s*u\s*e\s*s\s*t\s*i\s*o\s*n\s*\s*N\s*u\s*m\s*b\s*e\s*r",
         "ms_mark_pattern": r"\((\d+)\)",
         "spec_chunk_size": 2000,
@@ -97,6 +100,7 @@ SUBJECT_CONFIGS = {
         "sub_question_pattern": r"\(\s*[a-h]\s*\)",
         "sub_sub_question_pattern": r"\((?:i{1,3}|iv|v|vi{1,3}|ix|x)\)",
         "question_pattern": r"\(T[\s\n]*o[\s\n]*t[\s\n]*a[\s\n]*l[\s\n]* [\s\n]*f[\s\n]*o[\s\n]*r[\s\n]* [\s\n]*Q[\s\n]*u[\s\n]*e[\s\n]*s[\s\n]*t[\s\n]*i[\s\n]*o[\s\n]*n[\s\n]* [\s\n]*(\d+[\s\n]*)[\s\n]* [\s\n]*=[\s\n]* [\s\n]*(\d+[\s\n]*)[\s\n]* [\s\n]*m[\s\n]*a[\s\n]*r[\s\n]*k[\s\n]*s?\)",
+        "question_split_pattern": r"\(T[\s\n]*o[\s\n]*t[\s\n]*a[\s\n]*l[\s\n]* [\s\n]*f[\s\n]*o[\s\n]*r[\s\n]* [\s\n]*Q[\s\n]*u[\s\n]*e[\s\n]*s[\s\n]*t[\s\n]*i[\s\n]*o[\s\n]*n[\s\n]* [\s\n]*(\d+[\s\n]*)[\s\n]* [\s\n]*=[\s\n]* [\s\n]*(\d+[\s\n]*)[\s\n]* [\s\n]*m[\s\n]*a[\s\n]*r[\s\n]*k[\s\n]*s?\)",
         "ms_pattern": r"(?i)Q\s*u\s*e\s*s\s*t\s*i\s*o\s*n\s*\s*N\s*u\s*m\s*b\s*e\s*r",
         "ms_mark_pattern": r"\((\d+)\)",
         "spec_chunk_size": 2000,

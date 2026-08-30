@@ -1111,6 +1111,7 @@ Do not return any explanations or markdown wrapper, return only raw JSON."""
                 "similarity_score": round(sim_score, 4),
                 "subtopic_data": task.get("subtopic_data", {}),
                 "marks": target_marks,
+                "image_paths": q_best.get("image_paths", []) if q_best else [],
                 "q_num": q_num
             }
 
@@ -1148,6 +1149,7 @@ Do not return any explanations or markdown wrapper, return only raw JSON."""
                 "matched_subtopic": matched_subtopic,
                 "similarity_score": round(sim_score, 4),
                 "subtopic_data": task.get("subtopic_data", {}),
+                "image_paths": q_best.get("image_paths", []) if q_best else [],
                 "q_num": q_num
             }
 
@@ -1453,4 +1455,148 @@ Do not return any explanations or markdown wrapper, return only raw JSON."""
             query = self.queries["revision_materials"].format(
                 topic=topic, subject=subject
             )
-            return self.llm.invoke_qa(spec_qa_chain, query)
+            return spec_qa_chain.invoke(query)["result"]
+
+
+def render_exam_pdf(
+    exam_output: dict[str, Any],
+    output_pdf_path: str,
+    subject: str = "GCSE Exam",
+    examiner: str = "",
+) -> str:
+    """Render generated exam into a PDF document using ReportLab.
+
+    Outputs rendered question screenshot images directly into the PDF layout
+    (simple retrieval), followed by student answer lines.
+
+    Args:
+        exam_output: Dict returned by generate_exam() containing questions.
+        output_pdf_path: Target path for the output PDF file.
+        subject: Subject name.
+        examiner: Exam board name.
+
+    Returns:
+        Absolute path to the generated PDF file.
+    """
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, HRFlowable
+
+    out_dir = os.path.dirname(os.path.abspath(output_pdf_path))
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+
+    doc = SimpleDocTemplate(
+        output_pdf_path,
+        pagesize=A4,
+        leftMargin=36,
+        rightMargin=36,
+        topMargin=36,
+        bottomMargin=36,
+    )
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "ExamTitle",
+        parent=styles["Title"],
+        fontSize=20,
+        leading=24,
+        textColor=colors.HexColor("#1A365D"),
+        alignment=1,
+        spaceAfter=8,
+    )
+    subtitle_style = ParagraphStyle(
+        "ExamSubtitle",
+        parent=styles["Normal"],
+        fontSize=11,
+        leading=15,
+        textColor=colors.HexColor("#4A5568"),
+        alignment=1,
+        spaceAfter=14,
+    )
+    section_style = ParagraphStyle(
+        "SectionHeader",
+        parent=styles["Heading2"],
+        fontSize=13,
+        leading=17,
+        textColor=colors.HexColor("#2B6CB0"),
+        spaceBefore=14,
+        spaceAfter=6,
+    )
+    q_num_style = ParagraphStyle(
+        "QNumHeader",
+        parent=styles["Heading3"],
+        fontSize=11,
+        leading=14,
+        textColor=colors.HexColor("#2D3748"),
+        spaceBefore=10,
+        spaceAfter=6,
+    )
+    text_style = ParagraphStyle(
+        "QBodyText",
+        parent=styles["Normal"],
+        fontSize=9.5,
+        leading=13.5,
+        textColor=colors.HexColor("#1A202C"),
+        spaceAfter=6,
+    )
+
+    story = []
+
+    # Document Header
+    sub_title = f"{subject} ({examiner})" if examiner else subject
+    story.append(Paragraph(f"<b>{sub_title} Past Paper Exam</b>", title_style))
+    story.append(Paragraph("<i>Answer ALL questions in the spaces provided.</i>", subtitle_style))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#2B6CB0"), spaceAfter=12))
+
+    questions_by_topic = exam_output.get("questions", {})
+    available_w = A4[0] - 72.0
+
+    q_count = 0
+    for topic, q_list in questions_by_topic.items():
+        if not q_list:
+            continue
+
+        for q in q_list:
+            q_count += 1
+            img_paths = q.get("image_paths", [])
+
+            # 1. Direct Image Output (Simple Retrieval) - Only images used, no extra text headers or answer lines
+            has_images = False
+            if img_paths:
+                for img_path in img_paths:
+                    if os.path.exists(img_path):
+                        try:
+                            from PIL import Image as PILImage
+                            with PILImage.open(img_path) as pil_img:
+                                orig_w, orig_h = pil_img.size
+
+                            render_w = min(available_w, orig_w * 0.5)
+                            render_h = (orig_h / orig_w) * render_w if orig_w else 200.0
+
+                            story.append(Image(img_path, width=render_w, height=render_h))
+                            story.append(Spacer(1, 10))
+                            has_images = True
+                        except Exception as e:
+                            logger.warning("Could not embed image %s in PDF: %s", img_path, e)
+
+            # 2. Fallback text output ONLY if image is not available
+            if not has_images:
+                q_num_str = q.get("number", f"{q_count})")
+                marks_val = q.get("marks", 1)
+                header_text = f"<b>Question {q_num_str} [{marks_val} marks]</b>"
+                story.append(Paragraph(header_text, q_num_style))
+                q_text = q.get("parent_description") or q.get("text") or ""
+                if q_text:
+                    story.append(Paragraph(q_text.replace("\n", "<br/>"), text_style))
+                for sq in q.get("sub_questions", []):
+                    sq_lbl = sq.get("label", "")
+                    sq_txt = sq.get("text") or sq.get("context") or ""
+                    sq_m = sq.get("marks", 1)
+                    story.append(Paragraph(f"<b>{sq_lbl}</b> {sq_txt} <i>({sq_m} marks)</i>", text_style))
+                story.append(Spacer(1, 14))
+
+    doc.build(story)
+    logger.info("Successfully generated past paper exam PDF: %s", output_pdf_path)
+    return output_pdf_path
