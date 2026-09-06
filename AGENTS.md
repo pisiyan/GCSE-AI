@@ -31,7 +31,8 @@ GCSE AI/
 │   ├── command_word_guidance.txt
 │   ├── generate_marking_policy.txt
 │   ├── evaluate_handwritten_script.txt
-│   └── ground_annotations.txt
+│   ├── ground_annotations.txt
+│   └── exam_feedback_summary.txt
 ├── llm/                      # LLM utilities, tracking, and embeddings
 │   ├── client.py             # Multi-provider LLM client with retries & JSON parsing
 │   ├── tracker.py            # TokenCostTracker for named session cost tracking
@@ -46,6 +47,8 @@ GCSE AI/
 │   ├── marker.py             # ExamMarker (mark scheme generation, grading, model answers)
 │   ├── visual_marker.py      # VisualExamMarker (3-stage vision marking & spatial grounding)
 │   ├── visual_renderer.py    # Teacher annotation renderer (highlights, ticks, underlines, margin notes)
+│   ├── canvas_typesetter.py  # Typesets typed student text onto clean feedback canvas
+│   ├── booklet.py            # Assembles marked pages & summary cover into marked_exam_booklet.pdf
 │   ├── segmenter.py          # ExamSegmenter (question paper, answer & mark scheme parsing)
 │   └── report.py             # Markdown feedback reports & performance analytics
 ├── content/                  # Interactive revision & pedagogical tools
@@ -59,7 +62,8 @@ GCSE AI/
 ├── data/                     # Raw exam PDFs, vectorstores, and extracted images
 │   └── {Subject}/{Examiner}/
 ├── test_outputs/             # Generated exam papers and marking reports
-└── tests/                    # Comprehensive unit test suite (85 tests)
+└── tests/                    # Comprehensive unit test suite (90 tests)
+
 ```
 
 ---

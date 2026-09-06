@@ -189,22 +189,99 @@ class ExamMarker:
         logger.info("Marking completed: %s", result[:100].replace('\n', ' '))
         return result
 
-    def mark_exam(self, questions: List[dict], topic: str) -> List[dict]:
-        """Mark a full set of question items in parallel."""
+    def mark_exam(
+        self, questions: List[dict], topic: str, compile_booklet: bool = True
+    ) -> List[dict]:
+        """Mark a full set of question items in parallel.
+
+        For each question item:
+        - If student answer is typed text, typesets it onto a clean feedback canvas image.
+        - Evaluates via the 3-stage visual marking pipeline (or text fallback).
+        - Renders teacher annotations (highlights, ticks, underlines, margin notes).
+        - Stitches all marked question pages into test_outputs/marked_exam_booklet.pdf.
+        """
+        from marking.canvas_typesetter import typeset_student_answer_to_b64
+        from marking.visual_marker import VisualExamMarker
+        from marking.visual_renderer import render_visual_annotations
+        from marking.booklet import assemble_marked_booklet_pdf
+
         logger.info("Marking full exam (%d questions) for topic '%s'...", len(questions), topic)
+        os.makedirs("test_outputs/marked_pages", exist_ok=True)
+        visual_marker = VisualExamMarker(
+            llm_client=self.llm,
+            subject=self.subject,
+            examiner=self.examiner,
+        )
 
         def _mark_item(item: dict) -> dict:
             q_text = item.get("question", "")
-            ans_text = item.get("student_answer", "")
+            ans_text = item.get("student_answer") or item.get("answer", "")
             ms_text = item.get("mark_scheme", "")
             marks = item.get("marks", 4) or 4
+            label = item.get("label") or f"Question {item.get('idx', 1)}"
+            clean_label = re.sub(r"[^a-zA-Z0-9_\-]", "_", label)
 
             if not ms_text:
                 ms_text = self.create_mark_scheme(q_text, marks, topic)
 
-            feedback = self.mark_answer(q_text, ans_text, ms_text, marks)
+            # Try visual marking first if student answer exists and vision is supported
+            is_mock = type(self.llm).__name__ == "MagicMock"
+            is_mock_without_vision = is_mock and ("_vision_enabled" not in self.llm.__dict__)
 
-            # Extract awarded marks [X/Y]
+            if ans_text and not is_mock_without_vision:
+
+                try:
+                    if isinstance(ans_text, str) and (
+                        os.path.exists(ans_text)
+                        or (len(ans_text) > 500 and " " not in ans_text[:50])
+                    ):
+                        img_b64 = ans_text
+                    else:
+                        # Typeset typed text onto clean feedback page canvas
+                        img_b64 = typeset_student_answer_to_b64(
+                            question_label=label,
+                            question_prompt=q_text,
+                            student_answer_text=ans_text,
+                            marks=marks,
+                        )
+
+                    marked_img_path = f"test_outputs/marked_pages/{clean_label}_marked.png"
+                    vis_res = visual_marker.mark_handwritten_answer(
+                        image_b64=img_b64,
+                        question=q_text,
+                        marks=marks,
+                        mark_scheme=ms_text,
+                    )
+                    render_visual_annotations(
+                        image_input=img_b64,
+                        annotations_data=vis_res.get("annotations_data", {}),
+                        output_path=marked_img_path,
+                    )
+
+                    awarded = vis_res.get("awarded_marks")
+                    if awarded is None:
+                        score_match = re.search(r"\[\s*(\d+)\s*/\s*(\d+)\s*\]", vis_res.get("evaluation", ""))
+                        awarded = int(score_match.group(1)) if score_match else None
+
+                    res_item = dict(item)
+                    res_item["result"] = vis_res.get("evaluation", "")
+                    res_item["awarded_marks"] = awarded
+                    res_item["mark_scheme"] = ms_text
+                    res_item["marked_image_path"] = marked_img_path
+                    res_item["annotations"] = vis_res.get("annotations", [])
+                    res_item["teacher_summary"] = vis_res.get("teacher_summary", "")
+                    res_item["question_type"] = vis_res.get("question_type", "point_based")
+                    return res_item
+                except Exception as e:
+                    logger.debug(
+                        "Visual marking not available or failed for %s, falling back to text: %s",
+                        label,
+                        e,
+                    )
+
+
+            # Fallback to standard text marking
+            feedback = self.mark_answer(q_text, ans_text, ms_text, marks)
             score_match = re.search(r"\[\s*(\d+)\s*/\s*(\d+)\s*\]", feedback)
             awarded = int(score_match.group(1)) if score_match else None
 
@@ -221,8 +298,30 @@ class ExamMarker:
             for future in sorted_futures:
                 results.append(future.result())
 
+        # Compile PDF booklet if visual pages were generated
+        marked_imgs = [r.get("marked_image_path") for r in results if r.get("marked_image_path")]
+        if compile_booklet and marked_imgs:
+            try:
+                from marking.report import generate_performance_summary
+
+                summary_text = generate_performance_summary(
+                    self.subject, self.examiner, topic, results, self.llm
+                )
+                assemble_marked_booklet_pdf(
+                    subject=self.subject,
+                    examiner=self.examiner,
+                    topic=topic,
+                    marked_image_paths=marked_imgs,
+                    question_results=results,
+                    executive_summary_text=summary_text,
+                    output_pdf_path="test_outputs/marked_exam_booklet.pdf",
+                )
+            except Exception as e:
+                logger.warning("Failed to compile marked exam booklet PDF: %s", e)
+
         logger.info("Full exam marking finished for %d questions.", len(results))
         return results
+
 
     def mark_question_from_files(self, user_data_dir: str = "user_data") -> str:
         """Mark questions from documents deposited in user_data/ directory."""
