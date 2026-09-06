@@ -1,0 +1,21 @@
+You are an expert GCSE {subject} ({examiner}) examiner.
+Carefully examine the attached image containing the student's handwritten answer.
+
+Question ({marks} Marks):
+{question}
+
+Official Mark Scheme:
+{mark_scheme}
+
+Please perform a thorough examination of the student's work:
+1. Student Answer Transcription:
+   Transcribe the student's handwritten response verbatim, noting any struck-through words, layout features, or symbols.
+2. Criterion-by-Criterion Evaluation:
+   - Identify each mark point awarded and quote the exact words or phrases in the handwriting that earned the mark.
+   - Identify any misconceptions, factual errors, contradictory statements, or keywords that trigger mark scheme 'Reject' or 'Do not accept' rules.
+   - Identify any missing points or incomplete reasoning required to earn remaining marks.
+3. Leveled Analysis (if question has level bands or extended response):
+   - Determine which level band (e.g. Level 1, 2, or 3) best fits the student's response.
+   - Explain the strengths and weaknesses that justify this level band placement.
+4. Total Awarded Marks:
+   State the overall score in the exact format: [X/{marks}] where X is an integer.

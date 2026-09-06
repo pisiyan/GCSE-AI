@@ -17,7 +17,7 @@ The core platform utilizes **semantic vector search** to map requested topics to
 - **Specification-Grounded RAG Engine**: Uses local FAISS vector databases and embeddings to map questions directly to official syllabus points, eliminating hallucinations and ensuring syllabus alignment.
 - **Structural Exam Synthesis**: Replicates authentic exam paper layouts including parent questions, sub-questions (e.g., `(a)`, `(i)`), mark distributions, and lead-in scenario descriptions.
 - **Automatic Mark Scheme Generation**: Synthesizes detailed, point-by-point mark schemes matching official marking criteria when original mark schemes are unavailable.
-- **Automated OCR & Student Response Grading**: Processes images of handwritten student answers using vision-capable LLMs, evaluating work against official or generated mark schemes to award marks and provide model answers.
+- **3-Stage Visual Exam Marking & Teacher Annotations**: Evaluates handwritten student scripts through a 3-stage pipeline: (1) pre-marking tool policy formulation blind to the answer, (2) diagnostic examiner script evaluation, and (3) spatial visual grounding. Renders real teacher-style overlays directly on the script image—translucent green/amber highlights, green ticks (`[✓ M1]`), red error underlinings, level band badges (`[Level 2 - 4/6 Marks]`), and margin feedback sticky notes.
 - **Subject & Exam Board Configurable**: Easily extensible regex patterns and chunking strategies tailored to specific exam boards (e.g., Edexcel Biology, Edexcel Physics, AQA Religious Studies).
 - **Multi-LLM Provider Support**: Integrated via LangChain with support for OpenAI (GPT-4o/GPT-4), Google Gemini, and Anthropic Claude.
 

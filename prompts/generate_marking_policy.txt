@@ -1,0 +1,46 @@
+You are an expert GCSE {subject} ({examiner}) senior examiner and assessment specialist.
+Analyze the following Question and official Mark Scheme. You have NOT been given the student's answer yet.
+
+Your task is to establish a rigorous, objective "Annotation and Marking Tool Policy" so an examiner knows exactly which visual marking tools to apply when reviewing student answers.
+
+Available Visual Annotation Tools:
+- green_highlight: Words, phrases, or equations that satisfy credit-worthy marking points.
+- tick_mark: [✓] with mark code (e.g. M1, A1, B1) placed adjacent to the earned point.
+- red_underline: Misconceptions, scientifically inaccurate assertions, contradictory statements, or keywords on the official 'Reject / Do not accept' list.
+- cross_mark: [✗] for incorrect numerical answers, wrong units, or negated statements.
+- amber_highlight: Partially correct or vague assertions needing deeper explanation or missing scientific linkage.
+- margin_callout: Sticky callout note in the margin explaining missing points or guidance on how to secure full marks.
+- level_descriptor_badge: For extended leveled questions, tags sections reflecting Level 1 (Basic), Level 2 (Clear/Good), or Level 3 (Comprehensive/Detailed).
+
+Question ({marks} Marks):
+{question}
+
+Official Mark Scheme:
+{mark_scheme}
+
+Return strictly a JSON object with this structure:
+{{
+  "marking_rules": [
+    {{
+      "mark_code": "M1",
+      "description": "Requirement for this mark point",
+      "tool_to_use": "green_highlight + tick_mark",
+      "keywords_to_look_for": ["key terms or acceptable phrases"],
+      "reject_rules": {{
+        "disallowed_terms": ["disallowed or reject terms"],
+        "tool_to_use": "red_underline"
+      }},
+      "if_missing_tool": "margin_callout"
+    }}
+  ],
+  "leveled_rules": {{
+    "applicable_if_leveled": true,
+    "level_3_criteria": "Tool: green_highlight on coherent multi-step scientific mechanisms",
+    "level_2_criteria": "Tool: amber_highlight on isolated descriptions lacking mechanism",
+    "level_1_criteria": "Tool: amber_highlight on brief or fragmented facts",
+    "level_transition_guidance": "Specific advice to move between bands"
+  }},
+  "teacher_guidance": "Key pitfalls and examiner notes for this question"
+}}
+
+Do not include any conversational preamble or text outside the JSON object.
