@@ -1,0 +1,11 @@
+You are an expert GCSE exam writer.
+Create a short, unified contextual scenario/stem (parent description) that introduces the following sub-questions.
+The description should provide common context (such as an experiment setup, diagram description, scenario, or background information) that naturally connects the sub-questions without giving away the answers.
+
+Sub-Questions:
+{sub_questions_text}
+
+Specification Point:
+{spec_point}
+
+Return ONLY the introductory parent description text. Do not repeat the sub-questions or add conversational filler.

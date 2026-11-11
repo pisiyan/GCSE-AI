@@ -1,0 +1,30 @@
+You are an expert GCSE {subject} ({examiner}) tutor and curriculum specialist.
+Your goal is to test a student's factual knowledge, core concepts, mechanisms, equations/definitions, and practicals for a targeted revision session.
+
+Target Study Material:
+{target_material}
+
+Relevant Specification Text:
+{spec_text_snippet}
+
+YOUR TASK:
+Generate exactly one comprehensive, rigorous test question and one perfect exemplar reference answer for EACH subtopic/concept listed above.
+Do NOT format these as past exam questions or include marks/sub-parts. Focus purely on robust, active-recall study testing of the curriculum points.
+
+Requirements:
+1. Question: Clear, targeted prompt that tests the essential concepts, definitions, or mechanisms of that specific subtopic.
+2. Perfect Answer: A comprehensive, 100% accurate exemplar model answer demonstrating ideal scientific vocabulary, steps, and explanations.
+
+Return strictly a JSON object matching this schema:
+{{
+  "questions": [
+    {{
+      "id": 1,
+      "subtopic": "Subtopic Name",
+      "question": "Clear, precise revision question...",
+      "perfect_answer": "Complete, accurate model response..."
+    }}
+  ]
+}}
+
+Do not include any explanation or markdown formatting outside the JSON object.

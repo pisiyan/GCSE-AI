@@ -1,0 +1,319 @@
+================================================================================
+VECTOR DATABASE CONTENTS: ReligiousStudies (AQA)
+Database Path: data/ReligiousStudies/AQA/ReligiousStudies-AQA-vectorDatabase
+Total Ingested Documents: 24
+================================================================================
+
+--------------------------------------------------------------------------------
+DOCUMENT #1 | Type: QuestionPapers | Marks: None
+Content:
+For Examiner’s Use
+Question
+Mark
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #2 | Type: QuestionPapers | Marks: None
+Content:
+TOTAL
+Monday 11 May 2020
+Afternoon
+Time allowed: 1 hour 45 minutes
+Materials
+Before you open this book, you must ensure you also have:
+• the Question Book for the other religion option
+you are entered for (Buddhism, Hinduism, Islam, Judaism or Sikhism).
+You will have 1 hour 45 minutes to complete both Question Books.
+Instructions
+• Use black ink or black ball-point pen.
+• Fill in the boxes at the top of this page and on your other book.
+• If you need
+this book. Write the
+• Do all rough work in this book.
+Cross through any work you do not want to be marked.
+• You must answer the questions in the spaces provided.
+Information
+• The maximum mark for this paper is 51.
+• The marks for the questions are shown in brackets.
+• Spelling, Punctuation and Grammar (SPaG) will be assessed in the 12-mark
+question in the Beliefs section.
+Advice
+You are advised to spend 50 minutes on this religion option and 50 minutes on your other religion
+option.
+Please write clearly in block capitals.
+Centre number
+Candidate number
+Surname
+Forename(s)
+Candidate signature
+I declare this is my own work.
+GCSE
+RELIGIOUS STUDIES A
+Paper 1: Christianity
+Christianity: Beliefs
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #3 | Type: QuestionPapers | Marks: 1
+Content:
+Which one of the following is not part of God’s nature?
+[1 mark]
+Put a tick ( • ) in the box next to the correct answer.
+A
+Just
+B
+Limited
+C
+Loving
+D
+Oneness
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #4 | Type: QuestionPapers | Marks: 2
+Content:
+Give two Christian beliefs about God’s creation of the world.
+[2 marks]
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #5 | Type: QuestionPapers | Marks: 4
+Content:
+Explain two ways in which belief in hell influences Christians today.
+[4 marks]
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #6 | Type: QuestionPapers | Marks: 5
+Content:
+Explain two Christian beliefs about the role of Jesus Christ in salvation.
+Refer to sacred writings or another source of Christian belief and teaching in
+your answer.
+[5 marks]
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #7 | Type: QuestionPapers | Marks: 12
+Content:
+‘The resurrection of the dead is the most important Christian belief.’
+Evaluate this statement.
+In your answer you should:
+• refer to Christian teaching
+• give reasoned arguments to support this statement
+• give reasoned arguments to support a different point of view
+• reach a justified conclusion.
+[12 marks]
+[SPaG 3 marks]
+Christianity: Practices
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #8 | Type: QuestionPapers | Marks: 1
+Content:
+Which one of the following is a name for a ceremony in which adults become
+members of the Christian Church?
+[1 mark]
+Put a tick ( • ) in the box next to the correct answer.
+A Believer’s baptism
+B Infant baptism
+C Reconciliation
+D The Eucharist
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #9 | Type: QuestionPapers | Marks: 2
+Content:
+Give two types of Christian prayer.
+[2 marks]
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #10 | Type: QuestionPapers | Marks: 4
+Content:
+Explain two contrasting ways in which pilgrimage is experienced in Lourdes.
+[4 marks]
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #11 | Type: QuestionPapers | Marks: 5
+Content:
+Explain two reasons why evangelism is important for the Christian Church.
+Refer to sacred writings or another source of Christian belief and teaching in
+your answer.
+[5 marks]
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #12 | Type: QuestionPapers | Marks: 12
+Content:
+‘Christmas is the most important Christian celebration.’
+Evaluate this statement.
+In your answer you should:
+• refer to Christian teaching
+• give reasoned arguments to support this statement
+• give reasoned arguments to support a different point of view
+• reach a justified conclusion.
+[12 marks]
+ANSWER IN THE SPACES PROVIDED
+Write the question numbers in the left-hand margin.
+Write the question numbers in the left-hand margin.
+Write the question numbers in the left-hand margin.
+ANSWER IN THE SPACES PROVIDED
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #13 | Type: QuestionPapers | Marks: None
+Content:
+For Examiner’s Use
+Question
+Mark
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #14 | Type: QuestionPapers | Marks: None
+Content:
+TOTAL
+Monday 11 May 2020
+Afternoon
+Time allowed: 1 hour 45 minutes
+Materials
+Before you open this book, you must ensure you also have:
+• the Question Book for the other religion option
+you are entered for (Buddhism, Hinduism, Islam, Judaism or Sikhism).
+You will have 1 hour 45 minutes to complete both Question Books.
+Instructions
+• Use black ink or black ball-point pen.
+• Fill in the boxes at the top of this page and on your other book.
+• If you need
+this book. Write the
+• Do all rough work in this book.
+Cross through any work you do not want to be marked.
+• You must answer the questions in the spaces provided.
+Information
+• The maximum mark for this paper is 51.
+• The marks for the questions are shown in brackets.
+• Spelling, Punctuation and Grammar (SPaG) will be assessed in the 12-mark
+question in the Beliefs section.
+Advice
+You are advised to spend 50 minutes on this religion option and 50 minutes on your other religion
+option.
+Please write clearly in block capitals.
+Centre number
+Candidate number
+Surname
+Forename(s)
+Candidate signature
+I declare this is my own work.
+GCSE
+RELIGIOUS STUDIES A
+Paper 1: Christianity
+Christianity: Beliefs
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #15 | Type: QuestionPapers | Marks: 1
+Content:
+Which one of the following is not part of God’s nature?
+[1 mark]
+Put a tick ( • ) in the box next to the correct answer.
+A
+Just
+B
+Limited
+C
+Loving
+D
+Oneness
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #16 | Type: QuestionPapers | Marks: 2
+Content:
+Give two Christian beliefs about God’s creation of the world.
+[2 marks]
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #17 | Type: QuestionPapers | Marks: 4
+Content:
+Explain two ways in which belief in hell influences Christians today.
+[4 marks]
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #18 | Type: QuestionPapers | Marks: 5
+Content:
+Explain two Christian beliefs about the role of Jesus Christ in salvation.
+Refer to sacred writings or another source of Christian belief and teaching in
+your answer.
+[5 marks]
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #19 | Type: QuestionPapers | Marks: 12
+Content:
+‘The resurrection of the dead is the most important Christian belief.’
+Evaluate this statement.
+In your answer you should:
+• refer to Christian teaching
+• give reasoned arguments to support this statement
+• give reasoned arguments to support a different point of view
+• reach a justified conclusion.
+[12 marks]
+[SPaG 3 marks]
+Christianity: Practices
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #20 | Type: QuestionPapers | Marks: 1
+Content:
+Which one of the following is a name for a ceremony in which adults become
+members of the Christian Church?
+[1 mark]
+Put a tick ( • ) in the box next to the correct answer.
+A Believer’s baptism
+B Infant baptism
+C Reconciliation
+D The Eucharist
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #21 | Type: QuestionPapers | Marks: 2
+Content:
+Give two types of Christian prayer.
+[2 marks]
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #22 | Type: QuestionPapers | Marks: 4
+Content:
+Explain two contrasting ways in which pilgrimage is experienced in Lourdes.
+[4 marks]
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #23 | Type: QuestionPapers | Marks: 5
+Content:
+Explain two reasons why evangelism is important for the Christian Church.
+Refer to sacred writings or another source of Christian belief and teaching in
+your answer.
+[5 marks]
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+DOCUMENT #24 | Type: QuestionPapers | Marks: 12
+Content:
+‘Christmas is the most important Christian celebration.’
+Evaluate this statement.
+In your answer you should:
+• refer to Christian teaching
+• give reasoned arguments to support this statement
+• give reasoned arguments to support a different point of view
+• reach a justified conclusion.
+[12 marks]
+ANSWER IN THE SPACES PROVIDED
+Write the question numbers in the left-hand margin.
+Write the question numbers in the left-hand margin.
+Write the question numbers in the left-hand margin.
+ANSWER IN THE SPACES PROVIDED
+--------------------------------------------------------------------------------

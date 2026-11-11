@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from exam_segmenter import ExamSegmenter, extract_mark_val
+from marking.segmenter import ExamSegmenter, extract_mark_val
 from config import SubjectConfig
 
 

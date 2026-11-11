@@ -23,7 +23,10 @@ if "OPENAI_API_KEY" in os.environ:
 # Ensure logs don't clutter the stdout during interactive chat
 logging.getLogger().setLevel(logging.WARNING)
 
-from generate_content import GcseAssistant, format_exam_as_markdown, format_marking_as_markdown, format_single_question_as_markdown
+from assistant import GcseAssistant
+from exam_generation.formatter import format_exam_as_markdown, format_single_question_as_markdown
+from marking.report import format_marking_as_markdown
+from llm.tracker import global_tracker
 
 # ANSI Color Escape Codes
 class Colors:
@@ -78,27 +81,29 @@ for k, v in env_diagnostics.items():
 
 
 def scan_available_subjects() -> List[Tuple[str, str]]:
-    """Scan the data directory for existing FAISS databases."""
+    """Scan the data directory for existing FAISS databases, falling back to registered configs."""
     available = []
-    data_dir = "data"
-    if not os.path.exists(data_dir):
-        return [("Physics", "Edexcel"), ("Biology", "Edexcel"), ("ReligiousStudies", "AQA")]
-    
-    for subj in os.listdir(data_dir):
-        subj_path = os.path.join(data_dir, subj)
-        if os.path.isdir(subj_path):
-            for exam in os.listdir(subj_path):
-                exam_path = os.path.join(subj_path, exam)
-                if os.path.isdir(exam_path):
-                    # Check if vector database exists inside
-                    vdb_dir = os.path.join(exam_path, f"{subj}-{exam}-vectorDatabase")
-                    if os.path.exists(vdb_dir):
-                        available.append((subj, exam))
-    
-    # Fallback to defaults if none found
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    for base in ("data", os.path.join(root_dir, "data")):
+        if os.path.exists(base):
+            for subj in os.listdir(base):
+                subj_path = os.path.join(base, subj)
+                if os.path.isdir(subj_path):
+                    for exam in os.listdir(subj_path):
+                        exam_path = os.path.join(subj_path, exam)
+                        if os.path.isdir(exam_path):
+                            vdb_dir = os.path.join(exam_path, f"{subj}-{exam}-vectorDatabase")
+                            if os.path.exists(vdb_dir):
+                                available.append((subj, exam))
+
     if not available:
-        return [("Physics", "Edexcel"), ("Biology", "Edexcel"), ("ReligiousStudies", "AQA")]
-    return list(set(available))
+        from config import SUBJECT_CONFIGS
+        for k in SUBJECT_CONFIGS.keys():
+            parts = k.split("-", 1)
+            if len(parts) == 2:
+                available.append((parts[0], parts[1]))
+
+    return sorted(list(set(available)))
 
 
 class ChatbotAgent:
@@ -272,7 +277,13 @@ COMPLEX QUERIES & MULTI-ACTION RULES:
                 query = act_params.get("query", "")
                 Colors.print_blue(f"\n[Database Search] Searching past papers & mark schemes for: '{query}'...")
                 try:
-                    rag_result = self.assistant.llm_client.invoke_qa(self.assistant.ms_qa_chain, query)
+                    if hasattr(self.assistant.llm_client, "invoke_qa") and hasattr(self.assistant, "ms_qa_chain") and self.assistant.ms_qa_chain is not None:
+                        rag_result = self.assistant.llm_client.invoke_qa(self.assistant.ms_qa_chain, query)
+                    elif hasattr(self.assistant, "vectorstore") and self.assistant.vectorstore:
+                        docs = self.assistant.vectorstore.similarity_search(query, k=4)
+                        rag_result = "\n\n".join(doc.page_content for doc in docs) if docs else "No matching items found."
+                    else:
+                        rag_result = "No matching items found."
                     obs_content = f"Database search results for query '{query}':\n{rag_result}"
                     self.history.append({"role": "system", "content": obs_content})
                     executed_any = True
@@ -348,6 +359,7 @@ COMPLEX QUERIES & MULTI-ACTION RULES:
                     user_prefs["stored_preferences"] = self.preferences
 
                 try:
+                    global_tracker.start_session(f"Chatbot Exam Generation: {self.subject} ({self.examiner}) {exam_type} {total_marks} Marks")
                     exam_data = self.assistant.make_exam(
                         exam_type, total_marks, topics,
                         user_preferences=user_prefs,
@@ -419,7 +431,8 @@ COMPLEX QUERIES & MULTI-ACTION RULES:
                 
                 Colors.print_blue(f"\n[Marker] Grading answer against mark scheme...")
                 try:
-                    feedback = self.assistant.exam_marker.mark_answer(student_answer, mark_scheme, question, marks)
+                    global_tracker.start_session(f"Chatbot Mark Answer: {self.subject} ({self.examiner})")
+                    feedback = self.assistant.exam_marker.mark_answer(question, student_answer, mark_scheme, marks)
                     
                     os.makedirs("test_outputs", exist_ok=True)
                     timestamp = int(time.time())

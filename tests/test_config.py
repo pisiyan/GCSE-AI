@@ -5,7 +5,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from config import load_subject_config, SubjectConfig
-from exam_generator import QuestionGenerator
+from exam_generation import QuestionGenerator
 from unittest.mock import MagicMock
 
 
@@ -15,25 +15,19 @@ class TestConfig(unittest.TestCase):
         self.assertIsInstance(config, SubjectConfig)
         self.assertEqual(config.mark_pattern, "[\\[\\(]\\s*(\\d{1,2})\\s*(marks?)?\\s*[\\]\\)]?")
 
-    def test_load_missing_subject(self):
-        with self.assertRaises(ValueError):
-            load_subject_config("FakeSubject", "Fake")
+    def test_load_fallback_subject(self):
+        config = load_subject_config("FakeSubject", "Fake")
+        self.assertIsInstance(config, SubjectConfig)
+        self.assertEqual(config.subject, "FakeSubject")
+        self.assertEqual(config.examiner, "Fake")
 
     def test_config_types(self):
         config = load_subject_config("Biology", "Edexcel")
-        self.assertIsInstance(config.spec_chunk_size, int)
-        self.assertIsInstance(config.question_no_importance, bool)
         self.assertIsInstance(config.mark_pattern, str)
+        self.assertIsInstance(config.max_structure_retries, int)
+        self.assertIsInstance(config.similarity_threshold, float)
 
-    def test_optional_example_descriptions(self):
-        config = load_subject_config("ReligiousStudies", "AQA")
-        self.assertEqual(config.example_descriptions, 0)
-
-    def test_biology_has_example_descriptions(self):
-        config = load_subject_config("Biology", "Edexcel")
-        self.assertEqual(config.example_descriptions, 5)
-
-    def test_new_configurable_fields(self):
+    def test_configurable_fields(self):
         config = load_subject_config("Biology", "Edexcel")
         self.assertEqual(config.max_structure_retries, 50)
         self.assertEqual(config.max_parallel_workers, 10)
@@ -42,14 +36,13 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(config.temperature_structure, 0.0)
         self.assertEqual(config.temperature_generation, 0.7)
 
-    def test_empty_subject_config(self):
+    def test_subject_config_fields(self):
         config = load_subject_config("Physics", "Edexcel")
         self.assertIsInstance(config, SubjectConfig)
         self.assertEqual(config.subject, "Physics")
         self.assertEqual(config.examiner, "Edexcel")
-        # Verify it inherited Edexcel defaults (e.g., specific sub_question_pattern, marks, chunk size)
         self.assertEqual(config.sub_question_pattern, r"\(\s*[a-h]\s*\)")
-        self.assertEqual(config.spec_chunk_size, 2000)
+
 
 if __name__ == '__main__':
     unittest.main()

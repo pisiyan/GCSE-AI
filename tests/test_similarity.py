@@ -6,8 +6,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from similarity import SimilarityEngine
-from exam_generator import LocalSimilarityEngine, is_calculation_content, is_practical_content
+from llm.similarity import SimilarityEngine, LocalSimilarityEngine, is_calculation_content, is_practical_content
 
 class TestSimilarity(unittest.TestCase):
     def setUp(self):
@@ -139,7 +138,7 @@ class TestCognitiveFiltering(unittest.TestCase):
 
 class TestSubtopicOptimization(unittest.TestCase):
     def test_optimize_topic_subtopic_assignments(self):
-        from exam_generator import QuestionGenerator
+        from exam_generation.generator import QuestionGenerator
 
         mock_config = MagicMock()
         mock_config.min_subtopic_similarity = 0.50
@@ -196,7 +195,7 @@ class TestSubtopicOptimization(unittest.TestCase):
         self.assertEqual(result["Physics"], ["Forces", "Motion"])
 
     def test_subtopic_diversity_prioritization(self):
-        from exam_generator import QuestionGenerator
+        from exam_generation.generator import QuestionGenerator
 
         mock_config = MagicMock()
         mock_config.min_subtopic_similarity = 0.50
@@ -251,7 +250,7 @@ class TestSubtopicOptimization(unittest.TestCase):
         self.assertEqual(len(set(assigned)), 3)
 
     def test_subtopic_diversity_when_slots_exceed_subtopics(self):
-        from exam_generator import QuestionGenerator
+        from exam_generation.generator import QuestionGenerator
 
         mock_config = MagicMock()
         mock_config.min_subtopic_similarity = 0.50

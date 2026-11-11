@@ -14,8 +14,8 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(dotenv_path=os.path.join(script_dir, ".env"), override=True)
 
 from config import SUBJECT_CONFIGS, load_subject_config
-from load_and_store import DatabaseManager, VectorStore
-from build_spec_summary import generate_specification_summary
+from ingestion.load_and_store import DatabaseManager, VectorStore
+from ingestion.spec_summary import build_spec_summary
 
 logging.basicConfig(
     level=logging.INFO,
@@ -94,7 +94,19 @@ def ingest_all_subjects(target_subject: str = None) -> None:
 
         # 3. Generate Specification Content Summary immediately after specification ingestion (if not already existing)
         try:
-            generate_specification_summary(subject, examiner, skip_if_exists=True)
+            sum_json = f"data/{subject}/{examiner}/{subject}-{examiner}-specification_summary.json"
+            if not os.path.exists(sum_json):
+                spec_dir = f"data/{subject}/{examiner}/Specification"
+                spec_text = ""
+                if os.path.exists(spec_dir):
+                    for fn in os.listdir(spec_dir):
+                        if fn.endswith(".pdf"):
+                            from pypdf import PdfReader
+                            reader = PdfReader(os.path.join(spec_dir, fn))
+                            spec_text = "\n\n".join(p.extract_text() for p in reader.pages if p.extract_text())
+                            break
+                if spec_text:
+                    build_spec_summary(subject, examiner, spec_text, [])
         except Exception as e:
             logger.error("Failed to generate specification content summary for %s (%s): %s", subject, examiner, e)
 
@@ -169,7 +181,7 @@ def ingest_single_pdf(file_path: str) -> None:
     except StopIteration:
         pass
 
-    from load_and_store import PdfFile
+    from ingestion.load_and_store import PdfFile
     pdf_file = PdfFile(
         file_path, subject, examiner, doc_type, exam_type=exam_type
     )

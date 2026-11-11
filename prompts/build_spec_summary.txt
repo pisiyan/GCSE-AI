@@ -1,0 +1,41 @@
+You are an expert GCSE curriculum analyst and examiner.
+Analyze the complete official GCSE {subject} ({examiner}) specification document below.
+
+Specification Text:
+{spec_text}
+
+Known Exam Types / Papers / Tiers:
+{exam_types_str}
+
+YOUR TASK:
+Extract a comprehensive, complete, and perfectly structured curriculum summary of ALL topics and subtopics for {subject} ({examiner}).
+
+Requirements:
+1. Group topics by exam type / paper / tier if distinct, or list under each relevant exam type.
+2. For each topic, extract:
+   - "topic": Topic title and number (e.g., "Topic 1 - Key concepts in physics")
+   - "spec_code": Official syllabus reference range (e.g., "1.1 - 1.17")
+   - "subtopics": Comprehensive list of all subtopic titles / concepts under that topic.
+
+Return strictly a JSON object matching this schema:
+{{
+  "subject": "{subject}",
+  "examiner": "{examiner}",
+  "exam_types": [
+    {{
+      "exam_type": "Paper 1",
+      "topics": [
+        {{
+          "topic": "Topic Name",
+          "spec_code": "1.1 - 1.15",
+          "subtopics": [
+            "Subtopic 1",
+            "Subtopic 2"
+          ]
+        }}
+      ]
+    }}
+  ]
+}}
+
+Do not include any explanation or markdown formatting outside the JSON object.

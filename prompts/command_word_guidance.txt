@@ -1,0 +1,8 @@
+As an expert GCSE {subject} ({examiner}) examiner, provide clear guidance on the GCSE command word '{command_word}'.
+Include:
+1. **Official Definition & Examiner Expectation**: What this command word demands.
+2. **How to Structure Full-Mark Answers**: Key steps and phrases to use.
+3. **Common Student Mistakes & Pitfalls**: What causes lost marks.
+4. **Example Demonstration**: A quick 2-line mini example showing correct vs incorrect response style.
+
+Format clearly with bold headers and bullet points (•).

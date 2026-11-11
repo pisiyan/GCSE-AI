@@ -1,0 +1,28 @@
+You are an expert GCSE {subject} ({examiner}) exam writer.
+Create a multi-part GCSE exam parent question (composed of sub-parts) with a total of {total_marks} marks, focusing on the subtopic: "{subtopic}".
+
+Sub-parts required:
+{subparts_structure}
+
+Specification Reference:
+{spec_context}
+
+Past Paper Exemplars:
+{exemplars_text}
+
+{user_preferences_section}
+
+Format Requirements:
+Return strictly a JSON object matching this schema:
+{{
+  "parent_description": "Contextual scenario, setup, or experiment description...",
+  "sub_questions": [
+    {{
+      "label": "(a)",
+      "text": "Sub-question prompt...",
+      "marks": 2
+    }}
+  ]
+}}
+
+Do not include any text outside the JSON object.

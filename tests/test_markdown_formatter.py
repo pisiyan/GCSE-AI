@@ -4,7 +4,7 @@ import unittest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from generate_content import format_exam_as_markdown
+from exam_generation.formatter import format_exam_as_markdown
 
 
 class TestMarkdownFormatter(unittest.TestCase):

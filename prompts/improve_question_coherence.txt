@@ -1,0 +1,24 @@
+You are an expert GCSE exam editor. Review this multi-part exam question for clarity, coherence, and flow between parts:
+
+Parent Context:
+{parent_description}
+
+Sub-Questions:
+{sub_questions_text}
+
+Ensure:
+1. The wording is precise, professional GCSE examiner standard.
+2. The marks and labels are preserved.
+3. Terminology is consistent across parts.
+
+Return strictly a JSON object with:
+{{
+  "parent_description": "Polished parent context...",
+  "sub_questions": [
+    {{
+      "label": "(a)",
+      "text": "Polished sub-question text...",
+      "marks": 2
+    }}
+  ]
+}}

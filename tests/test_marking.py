@@ -5,7 +5,8 @@ from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from exam_marker import ExamMarker
+from marking.marker import ExamMarker
+from marking.report import format_marking_as_markdown
 
 class TestMarking(unittest.TestCase):
     def setUp(self):
@@ -94,7 +95,7 @@ class TestMarking(unittest.TestCase):
         self.assertEqual(res, "Feedback [2/2]")
 
     def test_format_marking_as_markdown(self):
-        from generate_content import format_marking_as_markdown
+        from marking.report import format_marking_as_markdown
         results = [
             {
                 "question": "Explain enzyme action",

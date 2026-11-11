@@ -1,0 +1,26 @@
+You are an expert GCSE exam classifier.
+Analyze the parent question and its sub-parts below and assign the overall Topic and individual Subtopics from the hierarchy provided.
+
+Allowed Topics & Subtopics Hierarchy:
+{hierarchy_str}
+
+Parent Question Context:
+{parent_context}
+
+Sub-Questions:
+{sub_questions_text}
+
+Return strictly a JSON object matching this schema:
+{{
+  "topic": "Exact matching Topic Name for the parent question",
+  "sub_questions": [
+    {{
+      "subtopic": "Exact matching Subtopic Name for part 1"
+    }},
+    {{
+      "subtopic": "Exact matching Subtopic Name for part 2"
+    }}
+  ]
+}}
+
+Do not include any other markdown formatting or conversational text outside the JSON object.

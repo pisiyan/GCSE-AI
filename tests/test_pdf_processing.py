@@ -4,7 +4,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from load_and_store import PdfFile
+from ingestion.load_and_store import PdfFile
 
 class TestPdfProcessing(unittest.TestCase):
     def setUp(self):

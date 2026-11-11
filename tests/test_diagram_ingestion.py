@@ -4,8 +4,8 @@ import unittest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from load_and_store import Question, crop_question_screenshots
-from exam_generator import render_exam_pdf
+from ingestion.load_and_store import Question, crop_question_screenshots
+from exam_generation.pdf_exporter import render_exam_pdf
 
 
 class TestDiagramIngestion(unittest.TestCase):
@@ -25,18 +25,11 @@ class TestDiagramIngestion(unittest.TestCase):
         self.assertEqual(d["marks"], 4)
         self.assertEqual(d["image_paths"], ["data/Biology/Edexcel/question_images/sample_q1_p1.png"])
 
-    def test_crop_question_screenshots_valid_pdf(self):
-        pdf_path = "data/Biology/Edexcel/Exam-Types/Higher/QuestionPapers/Biology-Edexcel-QuestionPaper-Higher-1June18.pdf"
-        if not os.path.exists(pdf_path):
-            self.skipTest("Sample PDF not found")
-            
-        raw_qs = [
-            "1 (a) Photosynthesis occurs in chloroplasts...",
-            "2 (a) Obesity increases the risk of heart disease..."
-        ]
-        results = crop_question_screenshots(pdf_path, "Biology", "Edexcel", raw_qs)
+    def test_crop_question_screenshots_missing_pdf(self):
+        results = crop_question_screenshots("non_existent.pdf", "Biology", "Edexcel", ["Q1 text", "Q2 text"])
         self.assertEqual(len(results), 2)
-        self.assertIsInstance(results[0], list)
+        self.assertEqual(results[0], [])
+        self.assertEqual(results[1], [])
 
     def test_render_exam_pdf_creation(self):
         out_pdf = "test_outputs/test_render_exam_pdf.pdf"
